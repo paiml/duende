@@ -361,4 +361,87 @@ mod tests {
         // (can't test reliably as system state varies)
         let _ = UblkControl::open();
     }
+
+    #[test]
+    fn test_detect_orphaned_returns_vec() {
+        // detect_orphaned_devices should return a Vec<u32>
+        let result = detect_orphaned_devices();
+        if let Ok(orphans) = result {
+            // Verify it's a valid vector (may be empty)
+            assert!(orphans.len() <= 256); // Reasonable upper bound
+        }
+    }
+
+    #[test]
+    fn test_cleanup_device_range_no_ublk() {
+        // When ublk isn't available, should return Ok(0)
+        let result = cleanup_device_range(0, 8);
+        match result {
+            Ok(count) => assert!(count <= 8), // Can't clean more than the range
+            Err(Error::ControlDeviceNotFound) => {} // Expected on systems without ublk
+            Err(_) => {} // Other errors acceptable
+        }
+    }
+
+    #[test]
+    fn test_cleanup_empty_orphan_list() {
+        // When no orphans detected via /dev, should try range cleanup
+        let result = cleanup_orphaned_devices();
+        // Should not panic
+        let _ = result;
+    }
+
+    #[test]
+    fn test_ublk_ctrl_cmd_ext_for_device() {
+        let cmd = UblkCtrlCmdExt::for_device(42);
+        assert_eq!(cmd.cmd.dev_id, 42);
+        assert_eq!(cmd.cmd.queue_id, u16::MAX);
+    }
+
+    #[test]
+    fn test_ublk_ctrl_cmd_ext_to_bytes() {
+        let cmd = UblkCtrlCmdExt::for_device(1);
+        let bytes = cmd.to_bytes();
+        assert_eq!(bytes.len(), 80); // 80 bytes for UringCmd80
+    }
+
+    #[test]
+    fn test_ublk_ctrl_dev_info_default() {
+        let info = UblkCtrlDevInfo::default();
+        assert_eq!(info.nr_hw_queues, 0);
+        assert_eq!(info.queue_depth, 0);
+        assert_eq!(info.state, 0);
+    }
+
+    #[test]
+    fn test_error_from_errno_enoent() {
+        let err = Error::from_errno(-libc::ENOENT);
+        match err {
+            Error::IoUringCommand { errno, .. } => {
+                assert_eq!(errno, -libc::ENOENT);
+            }
+            _ => panic!("Expected IoUringCommand error"),
+        }
+    }
+
+    #[test]
+    fn test_error_from_errno_ebusy() {
+        let err = Error::from_errno(-libc::EBUSY);
+        match err {
+            Error::IoUringCommand { errno, .. } => {
+                assert_eq!(errno, -libc::EBUSY);
+            }
+            _ => panic!("Expected IoUringCommand error"),
+        }
+    }
+
+    #[test]
+    fn test_block_dev_prefix() {
+        assert_eq!(UBLK_BLOCK_DEV_PREFIX, "/dev/ublkb");
+    }
+
+    #[test]
+    fn test_ctrl_dev_path() {
+        assert_eq!(UBLK_CTRL_DEV, "/dev/ublk-control");
+    }
 }

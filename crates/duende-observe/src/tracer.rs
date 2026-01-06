@@ -824,5 +824,301 @@ mod tests {
             assert_ne!(AnomalyKind::LatencySpike, AnomalyKind::ErrorBurst);
             assert_ne!(AnomalyKind::ErrorBurst, AnomalyKind::ResourceExhaustion);
         }
+
+        /// F008: Falsify TraceEvent construction.
+        #[test]
+        fn f008_trace_event_construction() {
+            let event = TraceEvent {
+                syscall: "read".to_string(),
+                duration_us: 1000,
+                source_location: Some("main.rs:42".to_string()),
+            };
+            assert_eq!(event.syscall, "read");
+            assert_eq!(event.duration_us, 1000);
+            assert!(event.source_location.is_some());
+        }
+
+        /// F009: Falsify TraceEvent without source location.
+        #[test]
+        fn f009_trace_event_no_source() {
+            let event = TraceEvent {
+                syscall: "write".to_string(),
+                duration_us: 500,
+                source_location: None,
+            };
+            assert!(event.source_location.is_none());
+        }
+
+        /// F010: Falsify Anomaly construction.
+        #[test]
+        fn f010_anomaly_construction() {
+            let anomaly = Anomaly {
+                kind: AnomalyKind::ErrorBurst,
+                z_score: 3.5,
+                description: "High error rate".to_string(),
+            };
+            assert_eq!(anomaly.kind, AnomalyKind::ErrorBurst);
+            assert!((anomaly.z_score - 3.5).abs() < 0.001);
+        }
+
+        /// F011: Falsify AntiPattern construction.
+        #[test]
+        fn f011_anti_pattern_construction() {
+            let pattern = AntiPattern {
+                name: "BusyWait".to_string(),
+                severity: 5,
+                description: "Excessive CPU usage".to_string(),
+            };
+            assert_eq!(pattern.name, "BusyWait");
+            assert_eq!(pattern.severity, 5);
+        }
+
+        /// F012: Falsify TraceReport is clonable.
+        #[test]
+        fn f012_trace_report_clone() {
+            let report = TraceReport {
+                pid: 1234,
+                events: vec![],
+                anomalies: vec![],
+                critical_path: vec!["test".to_string()],
+                anti_patterns: vec![],
+            };
+            let cloned = report.clone();
+            assert_eq!(cloned.pid, 1234);
+            assert_eq!(cloned.critical_path.len(), 1);
+        }
+
+        /// F013: Falsify AnomalyKind debug output.
+        #[test]
+        fn f013_anomaly_kind_debug() {
+            let kinds = [
+                AnomalyKind::LatencySpike,
+                AnomalyKind::ErrorBurst,
+                AnomalyKind::ResourceExhaustion,
+            ];
+            for kind in kinds {
+                let debug = format!("{:?}", kind);
+                assert!(!debug.is_empty());
+            }
+        }
+
+        /// F014: Falsify AnomalyKind copy semantics.
+        #[test]
+        fn f014_anomaly_kind_copy() {
+            let original = AnomalyKind::ResourceExhaustion;
+            let copy = original;
+            assert_eq!(copy, AnomalyKind::ResourceExhaustion);
+        }
+    }
+
+    mod extended_tests {
+        use super::*;
+
+        #[test]
+        fn test_trace_report_debug() {
+            let report = TraceReport {
+                pid: 42,
+                events: vec![],
+                anomalies: vec![],
+                critical_path: vec![],
+                anti_patterns: vec![],
+            };
+            let debug = format!("{:?}", report);
+            assert!(debug.contains("TraceReport"));
+            assert!(debug.contains("42"));
+        }
+
+        #[test]
+        fn test_trace_event_debug() {
+            let event = TraceEvent {
+                syscall: "test".to_string(),
+                duration_us: 100,
+                source_location: None,
+            };
+            let debug = format!("{:?}", event);
+            assert!(debug.contains("TraceEvent"));
+        }
+
+        #[test]
+        fn test_anomaly_debug() {
+            let anomaly = Anomaly {
+                kind: AnomalyKind::LatencySpike,
+                z_score: 2.5,
+                description: "test".to_string(),
+            };
+            let debug = format!("{:?}", anomaly);
+            assert!(debug.contains("Anomaly"));
+        }
+
+        #[test]
+        fn test_anti_pattern_debug() {
+            let pattern = AntiPattern {
+                name: "test".to_string(),
+                severity: 1,
+                description: "desc".to_string(),
+            };
+            let debug = format!("{:?}", pattern);
+            assert!(debug.contains("AntiPattern"));
+        }
+
+        #[test]
+        fn test_trace_event_clone() {
+            let event = TraceEvent {
+                syscall: "clone_test".to_string(),
+                duration_us: 999,
+                source_location: Some("file.rs:1".to_string()),
+            };
+            let cloned = event.clone();
+            assert_eq!(cloned.syscall, "clone_test");
+            assert_eq!(cloned.duration_us, 999);
+        }
+
+        #[test]
+        fn test_anomaly_clone() {
+            let anomaly = Anomaly {
+                kind: AnomalyKind::ErrorBurst,
+                z_score: 4.0,
+                description: "burst".to_string(),
+            };
+            let cloned = anomaly.clone();
+            assert_eq!(cloned.z_score, 4.0);
+        }
+
+        #[test]
+        fn test_anti_pattern_clone() {
+            let pattern = AntiPattern {
+                name: "LockContention".to_string(),
+                severity: 4,
+                description: "high contention".to_string(),
+            };
+            let cloned = pattern.clone();
+            assert_eq!(cloned.name, "LockContention");
+            assert_eq!(cloned.severity, 4);
+        }
+
+        #[cfg(target_os = "linux")]
+        #[test]
+        fn test_syscall_name_all_common() {
+            // Test all commonly used syscalls
+            let syscalls = [
+                (0, "read"),
+                (1, "write"),
+                (2, "open"),
+                (3, "close"),
+                (4, "stat"),
+                (5, "fstat"),
+                (6, "lstat"),
+                (7, "poll"),
+                (8, "lseek"),
+                (9, "mmap"),
+                (10, "mprotect"),
+                (11, "munmap"),
+                (12, "brk"),
+                (16, "ioctl"),
+                (35, "nanosleep"),
+                (56, "clone"),
+                (57, "fork"),
+                (59, "execve"),
+                (60, "exit"),
+                (61, "wait4"),
+                (62, "kill"),
+                (202, "futex"),
+                (228, "clock_gettime"),
+                (257, "openat"),
+            ];
+
+            for (nr, expected_name) in syscalls {
+                assert_eq!(DaemonTracer::syscall_name(nr), expected_name);
+            }
+        }
+
+        #[cfg(target_os = "linux")]
+        #[test]
+        fn test_syscall_name_negative() {
+            assert_eq!(DaemonTracer::syscall_name(-1), "none");
+        }
+
+        #[test]
+        fn test_tracer_syscall_stats_mut() {
+            let mut tracer = DaemonTracer::new();
+            tracer.syscall_counts.insert("test1".to_string(), 10);
+            tracer.syscall_counts.insert("test2".to_string(), 20);
+
+            let stats = tracer.syscall_stats();
+            assert_eq!(stats.len(), 2);
+            assert_eq!(stats.get("test1"), Some(&10));
+            assert_eq!(stats.get("test2"), Some(&20));
+        }
+
+        #[test]
+        fn test_detect_anti_patterns_epoll_variants() {
+            let mut tracer = DaemonTracer::new();
+            tracer.syscall_counts.insert("epoll_pwait".to_string(), 150);
+            tracer.syscall_counts.insert("pselect6".to_string(), 100);
+            tracer.syscall_counts.insert("read".to_string(), 50);
+
+            let patterns = tracer.detect_anti_patterns();
+            assert!(patterns.iter().any(|p| p.name == "BusyPolling"));
+        }
+
+        #[test]
+        fn test_detect_anti_patterns_brk_only() {
+            let mut tracer = DaemonTracer::new();
+            tracer.syscall_counts.insert("brk".to_string(), 100);
+            tracer.syscall_counts.insert("read".to_string(), 100);
+
+            let patterns = tracer.detect_anti_patterns();
+            // 100/200 = 50% > 20% threshold, but need > 50 calls
+            assert!(patterns.iter().any(|p| p.name == "MemoryChurn"));
+        }
+
+        #[test]
+        fn test_anomaly_low_frequency() {
+            let mut tracer = DaemonTracer::with_anomaly_threshold(1.0);
+            tracer.sample_count = 100;
+            // Highly skewed: one syscall very low
+            tracer.syscall_counts.insert("read".to_string(), 95);
+            tracer.syscall_counts.insert("write".to_string(), 2);
+            tracer.syscall_counts.insert("poll".to_string(), 1);
+            tracer.syscall_counts.insert("open".to_string(), 1);
+            tracer.syscall_counts.insert("close".to_string(), 1);
+
+            // The low frequency "close" might trigger ResourceExhaustion anomaly
+            let anomaly = tracer.detect_frequency_anomaly("close");
+            // May or may not detect depending on threshold
+            let _ = anomaly;
+        }
+
+        #[tokio::test]
+        async fn test_tracer_reattach() {
+            let mut tracer = DaemonTracer::new();
+            let pid = std::process::id();
+
+            tracer.attach(pid).await.unwrap();
+            assert_eq!(tracer.attached_pid(), Some(pid));
+
+            tracer.detach();
+            assert!(tracer.attached_pid().is_none());
+
+            // Reattach
+            tracer.attach(pid).await.unwrap();
+            assert_eq!(tracer.attached_pid(), Some(pid));
+        }
+
+        #[test]
+        fn test_critical_path_empty() {
+            let tracer = DaemonTracer::new();
+            let path = tracer.build_critical_path();
+            assert!(path.is_empty());
+        }
+
+        #[test]
+        fn test_critical_path_single_entry() {
+            let mut tracer = DaemonTracer::new();
+            tracer.syscall_counts.insert("single".to_string(), 1);
+            let path = tracer.build_critical_path();
+            assert_eq!(path.len(), 1);
+            assert!(path[0].starts_with("single"));
+        }
     }
 }

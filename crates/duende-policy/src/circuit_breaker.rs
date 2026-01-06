@@ -285,4 +285,218 @@ mod tests {
         breaker.reset();
         assert_eq!(breaker.state(), CircuitState::Closed);
     }
+
+    #[test]
+    fn test_circuit_breaker_default() {
+        let breaker = CircuitBreaker::default();
+        assert_eq!(breaker.state(), CircuitState::Closed);
+        assert_eq!(breaker.failure_threshold, 5);
+        assert_eq!(breaker.recovery_timeout, Duration::from_secs(30));
+    }
+
+    #[test]
+    fn test_circuit_state_variants() {
+        assert_eq!(CircuitState::Closed, CircuitState::Closed);
+        assert_eq!(CircuitState::Open, CircuitState::Open);
+        assert_eq!(CircuitState::HalfOpen, CircuitState::HalfOpen);
+        assert_ne!(CircuitState::Closed, CircuitState::Open);
+        assert_ne!(CircuitState::Open, CircuitState::HalfOpen);
+    }
+
+    #[test]
+    fn test_circuit_state_debug() {
+        let state = CircuitState::Closed;
+        let debug_str = format!("{:?}", state);
+        assert!(debug_str.contains("Closed"));
+    }
+
+    #[test]
+    fn test_circuit_state_clone() {
+        let state = CircuitState::Open;
+        let cloned = state;
+        assert_eq!(cloned, CircuitState::Open);
+    }
+
+    #[test]
+    fn test_failure_in_open_state_ignored() {
+        let breaker = CircuitBreaker::new(2, Duration::from_secs(30));
+
+        // Open the circuit
+        breaker.record_failure();
+        breaker.record_failure();
+        assert_eq!(breaker.state(), CircuitState::Open);
+
+        // Further failures should be ignored
+        let count_before = breaker.failure_count();
+        breaker.record_failure();
+        assert_eq!(breaker.failure_count(), count_before);
+    }
+
+    #[test]
+    fn test_success_in_open_state_ignored() {
+        let breaker = CircuitBreaker::new(2, Duration::from_secs(30));
+
+        // Open the circuit
+        breaker.record_failure();
+        breaker.record_failure();
+        assert_eq!(breaker.state(), CircuitState::Open);
+
+        // Success in open state should be ignored (no transition)
+        breaker.record_success();
+        assert_eq!(breaker.state(), CircuitState::Open);
+    }
+
+    #[test]
+    fn test_half_open_transition_after_timeout() {
+        let breaker = CircuitBreaker::new(2, Duration::from_millis(10));
+
+        // Open the circuit
+        breaker.record_failure();
+        breaker.record_failure();
+        assert_eq!(breaker.state(), CircuitState::Open);
+
+        // Wait for recovery timeout
+        std::thread::sleep(Duration::from_millis(20));
+
+        // Should transition to half-open
+        assert_eq!(breaker.state(), CircuitState::HalfOpen);
+        assert!(breaker.allow()); // Half-open allows requests
+    }
+
+    #[test]
+    fn test_half_open_success_closes_circuit() {
+        let breaker = CircuitBreaker::new(2, Duration::from_millis(10));
+
+        // Open the circuit
+        breaker.record_failure();
+        breaker.record_failure();
+        assert_eq!(breaker.state(), CircuitState::Open);
+
+        // Wait for recovery timeout
+        std::thread::sleep(Duration::from_millis(20));
+        assert_eq!(breaker.state(), CircuitState::HalfOpen);
+
+        // 3 successes should close the circuit
+        breaker.record_success();
+        breaker.record_success();
+        breaker.record_success();
+        assert_eq!(breaker.state(), CircuitState::Closed);
+    }
+
+    #[test]
+    fn test_half_open_failure_reopens_circuit() {
+        let breaker = CircuitBreaker::new(2, Duration::from_millis(10));
+
+        // Open the circuit
+        breaker.record_failure();
+        breaker.record_failure();
+        assert_eq!(breaker.state(), CircuitState::Open);
+
+        // Wait for recovery timeout
+        std::thread::sleep(Duration::from_millis(20));
+        assert_eq!(breaker.state(), CircuitState::HalfOpen);
+
+        // Failure in half-open should reopen
+        breaker.record_failure();
+        assert_eq!(breaker.state(), CircuitState::Open);
+    }
+
+    #[test]
+    fn test_half_open_partial_success() {
+        let breaker = CircuitBreaker::new(2, Duration::from_millis(10));
+
+        // Open the circuit
+        breaker.record_failure();
+        breaker.record_failure();
+
+        // Wait for recovery timeout
+        std::thread::sleep(Duration::from_millis(20));
+        assert_eq!(breaker.state(), CircuitState::HalfOpen);
+
+        // Only 2 successes (need 3 to close)
+        breaker.record_success();
+        breaker.record_success();
+        assert_eq!(breaker.state(), CircuitState::HalfOpen);
+    }
+
+    #[test]
+    fn test_failure_count_accuracy() {
+        let breaker = CircuitBreaker::new(10, Duration::from_secs(30));
+
+        for i in 1..=5 {
+            breaker.record_failure();
+            assert_eq!(breaker.failure_count(), i);
+        }
+    }
+
+    #[test]
+    fn test_reset_clears_failure_count() {
+        let breaker = CircuitBreaker::new(10, Duration::from_secs(30));
+
+        breaker.record_failure();
+        breaker.record_failure();
+        breaker.record_failure();
+        assert_eq!(breaker.failure_count(), 3);
+
+        breaker.reset();
+        assert_eq!(breaker.failure_count(), 0);
+    }
+
+    #[test]
+    fn test_allow_in_closed_state() {
+        let breaker = CircuitBreaker::new(5, Duration::from_secs(30));
+        assert!(breaker.allow());
+        breaker.record_failure();
+        assert!(breaker.allow()); // Still closed
+    }
+
+    #[test]
+    fn test_no_transition_before_timeout() {
+        let breaker = CircuitBreaker::new(2, Duration::from_secs(60));
+
+        breaker.record_failure();
+        breaker.record_failure();
+        assert_eq!(breaker.state(), CircuitState::Open);
+
+        // No sleep, should still be open
+        assert_eq!(breaker.state(), CircuitState::Open);
+        assert!(!breaker.allow());
+    }
+
+    #[test]
+    fn test_multiple_resets() {
+        let breaker = CircuitBreaker::new(2, Duration::from_secs(30));
+
+        breaker.record_failure();
+        breaker.record_failure();
+        breaker.reset();
+        assert_eq!(breaker.state(), CircuitState::Closed);
+
+        breaker.record_failure();
+        breaker.record_failure();
+        breaker.reset();
+        assert_eq!(breaker.state(), CircuitState::Closed);
+    }
+
+    #[test]
+    fn test_threshold_boundary() {
+        let breaker = CircuitBreaker::new(3, Duration::from_secs(30));
+
+        breaker.record_failure();
+        assert_eq!(breaker.state(), CircuitState::Closed);
+        breaker.record_failure();
+        assert_eq!(breaker.state(), CircuitState::Closed);
+        // Exactly at threshold
+        breaker.record_failure();
+        assert_eq!(breaker.state(), CircuitState::Open);
+    }
+
+    #[test]
+    fn test_single_failure_threshold() {
+        let breaker = CircuitBreaker::new(1, Duration::from_secs(30));
+
+        assert_eq!(breaker.state(), CircuitState::Closed);
+        breaker.record_failure();
+        assert_eq!(breaker.state(), CircuitState::Open);
+    }
 }

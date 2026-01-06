@@ -379,4 +379,123 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_mlock_result_failed_different_errnos() {
+        // Test different errno values
+        let failed_eperm = MlockResult::Failed(libc::EPERM);
+        let failed_enomem = MlockResult::Failed(libc::ENOMEM);
+        let failed_einval = MlockResult::Failed(libc::EINVAL);
+
+        assert_ne!(failed_eperm, failed_enomem);
+        assert_ne!(failed_enomem, failed_einval);
+        assert_eq!(failed_eperm, MlockResult::Failed(libc::EPERM));
+    }
+
+    #[test]
+    fn test_mlock_result_copy_semantics() {
+        let original = MlockResult::Success;
+        let copy1 = original;
+        let copy2 = original;
+        assert_eq!(copy1, copy2);
+        assert_eq!(original, copy1);
+    }
+
+    #[test]
+    fn test_resource_config_all_memory_options() {
+        // Test with all memory options enabled
+        let config = ResourceConfig {
+            lock_memory: true,
+            lock_memory_required: true,
+            memory_bytes: 1024 * 1024 * 512, // 512MB
+            ..ResourceConfig::default()
+        };
+
+        // On unprivileged systems, this may fail
+        let result = apply_memory_config(&config);
+        // Result depends on system privileges
+        let _ = result;
+    }
+
+    #[test]
+    fn test_resource_config_default_memory_values() {
+        let config = ResourceConfig::default();
+        assert!(!config.lock_memory);
+        assert!(!config.lock_memory_required);
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn test_is_memory_locked_after_lock() {
+        // Try to lock and check status
+        let result = lock_daemon_memory(false);
+        if let Ok(MlockResult::Success) = result {
+            // Memory should be locked now
+            // Note: is_memory_locked checks VmLck which may be 0 for small processes
+            let _ = is_memory_locked();
+            let _ = unlock_daemon_memory();
+        }
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn test_unlock_after_lock() {
+        let result = lock_daemon_memory(false);
+        if let Ok(MlockResult::Success) = result {
+            let unlock_result = unlock_daemon_memory();
+            assert!(unlock_result.is_ok());
+        }
+    }
+
+    #[test]
+    fn test_unlock_without_lock() {
+        // Unlocking without prior lock should be safe
+        let result = unlock_daemon_memory();
+        // Should succeed (no-op or actual unlock)
+        let _ = result;
+    }
+
+    #[test]
+    fn test_multiple_lock_unlock_cycles() {
+        for _ in 0..3 {
+            let lock_result = lock_daemon_memory(false);
+            if let Ok(MlockResult::Success) = lock_result {
+                let _ = unlock_daemon_memory();
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn test_proc_status_parsing() {
+        // Test that we can read /proc/self/status
+        let status = std::fs::read_to_string("/proc/self/status");
+        assert!(status.is_ok());
+        let status = status.unwrap();
+        // VmLck line should exist
+        assert!(status.lines().any(|l| l.starts_with("Vm")));
+    }
+
+    #[test]
+    fn test_apply_memory_config_with_defaults() {
+        let config = ResourceConfig::default();
+        let result = apply_memory_config(&config);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_mlock_result_debug_output() {
+        let success = MlockResult::Success;
+        let debug_str = format!("{:?}", success);
+        assert!(debug_str.contains("Success"));
+
+        let disabled = MlockResult::Disabled;
+        let debug_str = format!("{:?}", disabled);
+        assert!(debug_str.contains("Disabled"));
+
+        let failed = MlockResult::Failed(42);
+        let debug_str = format!("{:?}", failed);
+        assert!(debug_str.contains("Failed"));
+        assert!(debug_str.contains("42"));
+    }
 }

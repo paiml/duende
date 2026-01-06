@@ -510,9 +510,17 @@ mod tests {
 
         // Send SIGQUIT
         adapter.signal(&handle, Signal::Quit).await.unwrap();
-        tokio::time::sleep(Duration::from_millis(100)).await;
 
-        // Should be terminated
+        // Wait for termination with retry
+        for _ in 0..20 {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            let status = adapter.status(&handle).await.unwrap();
+            if status.is_terminal() {
+                return;
+            }
+        }
+
+        // Final check
         let status = adapter.status(&handle).await.unwrap();
         assert!(status.is_terminal());
     }

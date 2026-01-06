@@ -238,4 +238,178 @@ mod tests {
         assert_eq!(info.dev_id, 0);
         assert_eq!(info.state, 0);
     }
+
+    #[test]
+    fn test_ctrl_cmd_all_fields_default() {
+        let cmd = UblkCtrlCmd::default();
+        assert_eq!(cmd.len, 0);
+        assert_eq!(cmd.addr, 0);
+        assert_eq!(cmd.data[0], 0);
+        assert_eq!(cmd.dev_path_len, 0);
+        assert_eq!(cmd.pad, 0);
+        assert_eq!(cmd.reserved, 0);
+    }
+
+    #[test]
+    fn test_ctrl_cmd_ext_default() {
+        let ext = UblkCtrlCmdExt::default();
+        assert_eq!(ext.cmd.dev_id, u32::MAX);
+        assert_eq!(ext.padding, [0u8; 48]);
+    }
+
+    #[test]
+    fn test_ctrl_cmd_clone() {
+        let cmd = UblkCtrlCmd {
+            dev_id: 123,
+            queue_id: 456,
+            len: 789,
+            addr: 0xDEADBEEF,
+            data: [0x12345678],
+            dev_path_len: 10,
+            pad: 0,
+            reserved: 0,
+        };
+        let cloned = cmd;
+        assert_eq!(cloned.dev_id, 123);
+        assert_eq!(cloned.queue_id, 456);
+        assert_eq!(cloned.len, 789);
+        assert_eq!(cloned.addr, 0xDEADBEEF);
+    }
+
+    #[test]
+    fn test_ctrl_cmd_ext_clone() {
+        let ext = UblkCtrlCmdExt::for_device(99);
+        let cloned = ext;
+        assert_eq!(cloned.cmd.dev_id, 99);
+    }
+
+    #[test]
+    fn test_ctrl_dev_info_all_fields() {
+        let mut info = UblkCtrlDevInfo::default();
+        info.nr_hw_queues = 4;
+        info.queue_depth = 128;
+        info.state = 1;
+        info.max_io_buf_bytes = 1024 * 1024;
+        info.dev_id = 42;
+        info.ublksrv_pid = 12345;
+        info.flags = 0xFF;
+        info.ublksrv_flags = 0xAA;
+        info.owner_uid = 1000;
+        info.owner_gid = 1000;
+
+        assert_eq!(info.nr_hw_queues, 4);
+        assert_eq!(info.queue_depth, 128);
+        assert_eq!(info.state, 1);
+        assert_eq!(info.max_io_buf_bytes, 1024 * 1024);
+        assert_eq!(info.dev_id, 42);
+        assert_eq!(info.ublksrv_pid, 12345);
+        assert_eq!(info.flags, 0xFF);
+        assert_eq!(info.ublksrv_flags, 0xAA);
+        assert_eq!(info.owner_uid, 1000);
+        assert_eq!(info.owner_gid, 1000);
+    }
+
+    #[test]
+    fn test_ctrl_dev_info_clone() {
+        let info = UblkCtrlDevInfo {
+            nr_hw_queues: 8,
+            queue_depth: 256,
+            state: 2,
+            pad0: 0,
+            max_io_buf_bytes: 2048,
+            dev_id: 7,
+            ublksrv_pid: 999,
+            pad1: 0,
+            flags: 0x1234,
+            ublksrv_flags: 0x5678,
+            owner_uid: 500,
+            owner_gid: 500,
+            reserved1: 0,
+            reserved2: 0,
+        };
+        let cloned = info;
+        assert_eq!(cloned.nr_hw_queues, 8);
+        assert_eq!(cloned.dev_id, 7);
+    }
+
+    #[test]
+    fn test_ioctl_values_correct() {
+        // Verify ioctl encoding is correct
+        // UBLK_U_CMD_GET_DEV_INFO = _IOR('u', 0x02, 32)
+        let expected_get_info = (2u32 << 30) | (32u32 << 16) | (0x75u32 << 8) | 0x02;
+        assert_eq!(UBLK_U_CMD_GET_DEV_INFO, expected_get_info);
+
+        // UBLK_U_CMD_DEL_DEV = _IOWR('u', 0x05, 32)
+        let expected_del = (3u32 << 30) | (32u32 << 16) | (0x75u32 << 8) | 0x05;
+        assert_eq!(UBLK_U_CMD_DEL_DEV, expected_del);
+
+        // UBLK_U_CMD_STOP_DEV = _IOWR('u', 0x07, 32)
+        let expected_stop = (3u32 << 30) | (32u32 << 16) | (0x75u32 << 8) | 0x07;
+        assert_eq!(UBLK_U_CMD_STOP_DEV, expected_stop);
+    }
+
+    #[test]
+    fn test_constants() {
+        assert_eq!(UBLK_CTRL_DEV, "/dev/ublk-control");
+        assert_eq!(UBLK_CHAR_DEV_PREFIX, "/dev/ublkc");
+        assert_eq!(UBLK_BLOCK_DEV_PREFIX, "/dev/ublkb");
+    }
+
+    #[test]
+    fn test_ctrl_cmd_debug() {
+        let cmd = UblkCtrlCmd::default();
+        let debug_str = format!("{:?}", cmd);
+        assert!(debug_str.contains("UblkCtrlCmd"));
+        assert!(debug_str.contains("dev_id"));
+    }
+
+    #[test]
+    fn test_ctrl_cmd_ext_debug() {
+        let ext = UblkCtrlCmdExt::default();
+        let debug_str = format!("{:?}", ext);
+        assert!(debug_str.contains("UblkCtrlCmdExt"));
+    }
+
+    #[test]
+    fn test_ctrl_dev_info_debug() {
+        let info = UblkCtrlDevInfo::default();
+        let debug_str = format!("{:?}", info);
+        assert!(debug_str.contains("UblkCtrlDevInfo"));
+    }
+
+    #[test]
+    fn test_ctrl_cmd_ext_to_bytes_roundtrip() {
+        let ext = UblkCtrlCmdExt::for_device(0x12345678);
+        let bytes = ext.to_bytes();
+
+        // Verify the device ID in the byte representation
+        let dev_id = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+        assert_eq!(dev_id, 0x12345678);
+
+        // Verify queue_id is at bytes 4-5
+        let queue_id = u16::from_le_bytes([bytes[4], bytes[5]]);
+        assert_eq!(queue_id, u16::MAX);
+    }
+
+    #[test]
+    fn test_ctrl_cmd_ext_zero_device() {
+        let ext = UblkCtrlCmdExt::for_device(0);
+        assert_eq!(ext.cmd.dev_id, 0);
+        let bytes = ext.to_bytes();
+        assert_eq!(bytes[0], 0);
+        assert_eq!(bytes[1], 0);
+        assert_eq!(bytes[2], 0);
+        assert_eq!(bytes[3], 0);
+    }
+
+    #[test]
+    fn test_ctrl_cmd_ext_max_device() {
+        let ext = UblkCtrlCmdExt::for_device(u32::MAX);
+        assert_eq!(ext.cmd.dev_id, u32::MAX);
+        let bytes = ext.to_bytes();
+        assert_eq!(bytes[0], 0xFF);
+        assert_eq!(bytes[1], 0xFF);
+        assert_eq!(bytes[2], 0xFF);
+        assert_eq!(bytes[3], 0xFF);
+    }
 }
