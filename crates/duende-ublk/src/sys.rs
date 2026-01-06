@@ -14,11 +14,11 @@ use std::mem::size_of;
 
 const UBLK_MAGIC: u32 = b'u' as u32;
 
-const fn _ior(ty: u32, nr: u32, sz: usize) -> u32 {
+const fn ior(ty: u32, nr: u32, sz: usize) -> u32 {
     (2 << 30) | ((sz as u32) << 16) | (ty << 8) | nr
 }
 
-const fn _iowr(ty: u32, nr: u32, sz: usize) -> u32 {
+const fn iowr(ty: u32, nr: u32, sz: usize) -> u32 {
     (3 << 30) | ((sz as u32) << 16) | (ty << 8) | nr
 }
 
@@ -32,13 +32,13 @@ const UBLK_CMD_DEL_DEV: u32 = 0x05;
 const UBLK_CMD_STOP_DEV: u32 = 0x07;
 
 /// Get device info - _IOR('u', 0x02, struct ublksrv_ctrl_cmd)
-pub const UBLK_U_CMD_GET_DEV_INFO: u32 = _ior(UBLK_MAGIC, UBLK_CMD_GET_DEV_INFO, size_of::<UblkCtrlCmd>());
+pub const UBLK_U_CMD_GET_DEV_INFO: u32 = ior(UBLK_MAGIC, UBLK_CMD_GET_DEV_INFO, size_of::<UblkCtrlCmd>());
 
 /// Delete device - _IOWR('u', 0x05, struct ublksrv_ctrl_cmd)
-pub const UBLK_U_CMD_DEL_DEV: u32 = _iowr(UBLK_MAGIC, UBLK_CMD_DEL_DEV, size_of::<UblkCtrlCmd>());
+pub const UBLK_U_CMD_DEL_DEV: u32 = iowr(UBLK_MAGIC, UBLK_CMD_DEL_DEV, size_of::<UblkCtrlCmd>());
 
 /// Stop device - _IOWR('u', 0x07, struct ublksrv_ctrl_cmd)
-pub const UBLK_U_CMD_STOP_DEV: u32 = _iowr(UBLK_MAGIC, UBLK_CMD_STOP_DEV, size_of::<UblkCtrlCmd>());
+pub const UBLK_U_CMD_STOP_DEV: u32 = iowr(UBLK_MAGIC, UBLK_CMD_STOP_DEV, size_of::<UblkCtrlCmd>());
 
 // ============================================================================
 // Kernel Structures
@@ -121,10 +121,10 @@ impl UblkCtrlCmdExt {
 
     /// Convert to raw bytes for io_uring SQE cmd field
     #[must_use]
-    pub fn to_bytes(&self) -> [u8; 80] {
+    pub fn to_bytes(self) -> [u8; 80] {
         // SAFETY: UblkCtrlCmdExt is repr(C) and exactly 80 bytes
         // All bit patterns are valid for the struct
-        unsafe { std::mem::transmute_copy(self) }
+        unsafe { std::mem::transmute(self) }
     }
 }
 
@@ -170,6 +170,7 @@ pub struct UblkCtrlDevInfo {
 pub const UBLK_CTRL_DEV: &str = "/dev/ublk-control";
 
 /// Prefix for ublk character devices
+#[allow(dead_code)]
 pub const UBLK_CHAR_DEV_PREFIX: &str = "/dev/ublkc";
 
 /// Prefix for ublk block devices

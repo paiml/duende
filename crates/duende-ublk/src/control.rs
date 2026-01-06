@@ -99,7 +99,7 @@ impl UblkControl {
     /// - io_uring submission fails
     pub fn get_device_info(&mut self, dev_id: u32) -> Result<UblkCtrlDevInfo, Error> {
         let mut info = UblkCtrlDevInfo::default();
-        let info_ptr = &mut info as *mut UblkCtrlDevInfo as u64;
+        let info_ptr = std::ptr::from_mut(&mut info) as u64;
 
         let cmd = UblkCtrlCmdExt {
             cmd: crate::sys::UblkCtrlCmd {
