@@ -14,7 +14,7 @@
 
 | Metric | Value |
 |--------|-------|
-| Tests | 683 passing |
+| Tests | 706 passing |
 | Platforms | 6/6 implemented |
 | Falsification Tests | F001-F110 (110 tests) |
 
@@ -116,6 +116,7 @@ Duende follows the **Iron Lotus Framework** (Toyota Production System for Softwa
 | `duende-platform` | 29 | Platform detection, memory helpers |
 | `duende-policy` | 45 | Circuit breaker, jidoka, cgroups |
 | `duende-test` | 45 | Test harness, chaos injection |
+| `duende-ublk` | 23 | ublk device lifecycle, orphan cleanup |
 
 ## Quick Start
 

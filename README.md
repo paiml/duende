@@ -3,7 +3,7 @@
 [![Crates.io](https://img.shields.io/crates/v/duende-core.svg)](https://crates.io/crates/duende-core)
 [![Documentation](https://docs.rs/duende-core/badge.svg)](https://docs.rs/duende-core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-683%20passing-brightgreen.svg)](https://github.com/paiml/duende)
+[![Tests](https://img.shields.io/badge/tests-706%20passing-brightgreen.svg)](https://github.com/paiml/duende)
 
 <p align="center">
   <img src="assets/hero.svg" alt="Duende - Cross-Platform Daemon Orchestration" width="800">
@@ -28,7 +28,7 @@ cargo run --example mlock
 
 | Metric | Value | Falsification |
 |--------|-------|---------------|
-| Tests | 683 | `cargo test --workspace` |
+| Tests | 706 | `cargo test --workspace` |
 | Platforms | 6 of 6 | Native, Linux, macOS, Container, pepita, WOS |
 | Falsification | F001-F110 | 110 Popperian falsification tests |
 
@@ -145,6 +145,7 @@ docker run --cap-add=IPC_LOCK --ulimit memlock=-1:-1 your-daemon
 | `duende-platform` | 29 | Platform detection, memory helpers |
 | `duende-policy` | 45 | Circuit breaker, jidoka, cgroups |
 | `duende-test` | 45 | Test harness, chaos injection, mocks |
+| `duende-ublk` | 23 | ublk device lifecycle, orphan cleanup |
 
 ## Development
 
@@ -152,7 +153,7 @@ docker run --cap-add=IPC_LOCK --ulimit memlock=-1:-1 your-daemon
 # Build
 cargo build
 
-# Run all 683 tests
+# Run all 706 tests
 cargo test --workspace
 
 # Iron Lotus quality tiers
