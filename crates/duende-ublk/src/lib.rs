@@ -38,9 +38,9 @@ mod control;
 mod error;
 mod sys;
 
-pub use control::{cleanup_orphaned_devices, detect_orphaned_devices, UblkControl};
+pub use control::{UblkControl, cleanup_orphaned_devices, detect_orphaned_devices};
 pub use error::Error;
-pub use sys::{UblkCtrlCmd, UblkCtrlDevInfo, UBLK_CTRL_DEV};
+pub use sys::{UBLK_CTRL_DEV, UblkCtrlCmd, UblkCtrlDevInfo};
 
 #[cfg(test)]
 mod tests {
@@ -116,16 +116,12 @@ mod tests {
         // Should not panic on systems without ublk
         let result = detect_orphaned_devices();
         // Either Ok with empty vec or error is acceptable
-        match result {
-            Ok(orphans) => {
-                // On a clean system, should be empty
-                // (can't assert this as system state varies)
-                let _ = orphans;
-            }
-            Err(_) => {
-                // Error is acceptable if /dev/ublk-control doesn't exist
-            }
+        if let Ok(orphans) = result {
+            // On a clean system, should be empty
+            // (can't assert this as system state varies)
+            let _ = orphans;
         }
+        // Error is also acceptable if /dev/ublk-control doesn't exist
     }
 
     #[test]

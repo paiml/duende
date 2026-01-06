@@ -32,7 +32,8 @@ const UBLK_CMD_DEL_DEV: u32 = 0x05;
 const UBLK_CMD_STOP_DEV: u32 = 0x07;
 
 /// Get device info - _IOR('u', 0x02, struct ublksrv_ctrl_cmd)
-pub const UBLK_U_CMD_GET_DEV_INFO: u32 = ior(UBLK_MAGIC, UBLK_CMD_GET_DEV_INFO, size_of::<UblkCtrlCmd>());
+pub const UBLK_U_CMD_GET_DEV_INFO: u32 =
+    ior(UBLK_MAGIC, UBLK_CMD_GET_DEV_INFO, size_of::<UblkCtrlCmd>());
 
 /// Delete device - _IOWR('u', 0x05, struct ublksrv_ctrl_cmd)
 pub const UBLK_U_CMD_DEL_DEV: u32 = iowr(UBLK_MAGIC, UBLK_CMD_DEL_DEV, size_of::<UblkCtrlCmd>());

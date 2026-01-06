@@ -4,8 +4,11 @@
 //! `/dev/ublk-control` control device using io_uring URING_CMD.
 
 use crate::error::Error;
-use crate::sys::{UblkCtrlCmdExt, UblkCtrlDevInfo, UBLK_BLOCK_DEV_PREFIX, UBLK_CTRL_DEV, UBLK_U_CMD_DEL_DEV, UBLK_U_CMD_GET_DEV_INFO, UBLK_U_CMD_STOP_DEV};
-use io_uring::{opcode, squeue, types, IoUring};
+use crate::sys::{
+    UBLK_BLOCK_DEV_PREFIX, UBLK_CTRL_DEV, UBLK_U_CMD_DEL_DEV, UBLK_U_CMD_GET_DEV_INFO,
+    UBLK_U_CMD_STOP_DEV, UblkCtrlCmdExt, UblkCtrlDevInfo,
+};
+use io_uring::{IoUring, opcode, squeue, types};
 use std::fs::{self, File};
 use std::os::fd::AsRawFd;
 use std::path::Path;
@@ -120,10 +123,9 @@ impl UblkControl {
 
         // SAFETY: SQE is valid and fd is open
         unsafe {
-            self.ring
-                .submission()
-                .push(&sqe)
-                .map_err(|_| Error::IoUringSubmit(std::io::Error::from_raw_os_error(libc::ENOSPC)))?;
+            self.ring.submission().push(&sqe).map_err(|_| {
+                Error::IoUringSubmit(std::io::Error::from_raw_os_error(libc::ENOSPC))
+            })?;
         }
 
         self.ring.submit_and_wait(1).map_err(Error::IoUringSubmit)?;
@@ -163,10 +165,9 @@ impl UblkControl {
 
         // SAFETY: SQE is valid and fd is open
         unsafe {
-            self.ring
-                .submission()
-                .push(&sqe)
-                .map_err(|_| Error::IoUringSubmit(std::io::Error::from_raw_os_error(libc::ENOSPC)))?;
+            self.ring.submission().push(&sqe).map_err(|_| {
+                Error::IoUringSubmit(std::io::Error::from_raw_os_error(libc::ENOSPC))
+            })?;
         }
 
         // Submit without blocking
@@ -299,7 +300,7 @@ pub fn cleanup_orphaned_devices() -> Result<usize, Error> {
         match ctrl.force_delete(dev_id) {
             Ok(true) => cleaned += 1,
             Ok(false) => {} // Device didn't exist
-            Err(_) => {} // Ignore errors, try others
+            Err(_) => {}    // Ignore errors, try others
         }
     }
 
@@ -327,7 +328,7 @@ fn cleanup_device_range(start: u32, end: u32) -> Result<usize, Error> {
         match ctrl.force_delete(dev_id) {
             Ok(true) => cleaned += 1,
             Ok(false) => {} // Device didn't exist
-            Err(_) => {} // Ignore errors
+            Err(_) => {}    // Ignore errors
         }
     }
 
