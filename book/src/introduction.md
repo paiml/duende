@@ -14,7 +14,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Tests | 706 passing |
+| Tests | 781 passing |
+| Coverage | 88.67% |
 | Platforms | 6/6 implemented |
 | Falsification Tests | F001-F110 (110 tests) |
 
@@ -112,11 +113,11 @@ Duende follows the **Iron Lotus Framework** (Toyota Production System for Softwa
 |-------|-------|---------|
 | `duende-core` | 352 | Daemon trait, manager, platform adapters |
 | `duende-mlock` | 44 | `mlockall()` for swap safety (DT-007) |
-| `duende-observe` | 55 | `/proc` monitoring, syscall tracing |
-| `duende-platform` | 29 | Platform detection, memory helpers |
-| `duende-policy` | 45 | Circuit breaker, jidoka, cgroups |
+| `duende-observe` | 78 | `/proc` monitoring, syscall tracing |
+| `duende-platform` | 40 | Platform detection, memory helpers |
+| `duende-policy` | 62 | Circuit breaker, jidoka, cgroups |
 | `duende-test` | 45 | Test harness, chaos injection |
-| `duende-ublk` | 23 | ublk device lifecycle, orphan cleanup |
+| `duende-ublk` | 45 | ublk device lifecycle, orphan cleanup |
 
 ## Quick Start
 

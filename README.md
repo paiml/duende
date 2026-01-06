@@ -3,7 +3,8 @@
 [![Crates.io](https://img.shields.io/crates/v/duende-core.svg)](https://crates.io/crates/duende-core)
 [![Documentation](https://docs.rs/duende-core/badge.svg)](https://docs.rs/duende-core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-706%20passing-brightgreen.svg)](https://github.com/paiml/duende)
+[![Tests](https://img.shields.io/badge/tests-781%20passing-brightgreen.svg)](https://github.com/paiml/duende)
+[![Coverage](https://img.shields.io/badge/coverage-88.67%25-green.svg)](https://github.com/paiml/duende)
 
 <p align="center">
   <img src="assets/hero.svg" alt="Duende - Cross-Platform Daemon Orchestration" width="800">
@@ -28,7 +29,8 @@ cargo run --example mlock
 
 | Metric | Value | Falsification |
 |--------|-------|---------------|
-| Tests | 706 | `cargo test --workspace` |
+| Tests | 781 | `cargo test --workspace` |
+| Coverage | 88.67% | `cargo llvm-cov --workspace` |
 | Platforms | 6 of 6 | Native, Linux, macOS, Container, pepita, WOS |
 | Falsification | F001-F110 | 110 Popperian falsification tests |
 
@@ -141,11 +143,11 @@ docker run --cap-add=IPC_LOCK --ulimit memlock=-1:-1 your-daemon
 |-------|-------|---------|
 | `duende-core` | 352 | Daemon trait, manager, platform adapters |
 | `duende-mlock` | 44 | `mlockall()` for swap safety (DT-007) |
-| `duende-observe` | 55 | `/proc` monitoring, syscall tracing |
-| `duende-platform` | 29 | Platform detection, memory helpers |
-| `duende-policy` | 45 | Circuit breaker, jidoka, cgroups |
+| `duende-observe` | 78 | `/proc` monitoring, syscall tracing |
+| `duende-platform` | 40 | Platform detection, memory helpers |
+| `duende-policy` | 62 | Circuit breaker, jidoka, cgroups |
 | `duende-test` | 45 | Test harness, chaos injection, mocks |
-| `duende-ublk` | 23 | ublk device lifecycle, orphan cleanup |
+| `duende-ublk` | 45 | ublk device lifecycle, orphan cleanup |
 
 ## Development
 
@@ -153,7 +155,7 @@ docker run --cap-add=IPC_LOCK --ulimit memlock=-1:-1 your-daemon
 # Build
 cargo build
 
-# Run all 706 tests
+# Run all 781 tests
 cargo test --workspace
 
 # Iron Lotus quality tiers
