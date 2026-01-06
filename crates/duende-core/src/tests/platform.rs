@@ -125,11 +125,17 @@ async fn f106_native_adapter_reports_status() {
 /// F107: Stub adapters return NotSupported
 #[tokio::test]
 async fn f107_stub_adapters_not_supported() {
-    // Test all stub adapters
+    // Test stub adapters (excludes adapters with real implementations)
+    // - SystemdAdapter: real on Linux, stub on other platforms
+    // - LaunchdAdapter: real on macOS, stub on other platforms
+    // - ContainerAdapter: real implementation (uses docker/podman CLI)
     let adapters: Vec<Box<dyn PlatformAdapter>> = vec![
+        #[cfg(not(target_os = "linux"))]
         Box::new(SystemdAdapter::new()),
+        #[cfg(not(target_os = "macos"))]
         Box::new(LaunchdAdapter::new()),
-        Box::new(ContainerAdapter::docker()),
+        // ContainerAdapter is now a real implementation, not a stub
+        // PepitaAdapter and WosAdapter are still stubs
         Box::new(PepitaAdapter::new()),
         Box::new(WosAdapter::new()),
     ];
@@ -137,10 +143,27 @@ async fn f107_stub_adapters_not_supported() {
     for adapter in adapters {
         let daemon = MockDaemon::new("test");
         let result = adapter.spawn(Box::new(daemon)).await;
-        assert!(result.is_err(), "Stub adapter spawn should fail");
+        assert!(result.is_err(), "Stub adapter spawn should fail for {:?}", adapter.platform());
 
         let err = result.unwrap_err();
-        assert!(err.is_not_supported(), "Error should be NotSupported");
+        assert!(err.is_not_supported(), "Error should be NotSupported for {:?}", adapter.platform());
+    }
+}
+
+/// F107b: Real adapters do not return NotSupported on their native platform
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn f107b_linux_systemd_adapter_not_stub() {
+    let adapter = SystemdAdapter::new();
+    let daemon = MockDaemon::new("test");
+    let result = adapter.spawn(Box::new(daemon)).await;
+
+    // May succeed or fail, but should not be NotSupported
+    if let Err(e) = result {
+        assert!(
+            !e.is_not_supported(),
+            "SystemdAdapter on Linux should not return NotSupported"
+        );
     }
 }
 

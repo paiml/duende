@@ -14,19 +14,22 @@ Cross-platform daemon framework for the PAIML Sovereign AI Stack.
 
 | Metric | Value | Falsification |
 |--------|-------|---------------|
-| Tests | 527 | `cargo test --workspace` |
+| Tests | 665 | `cargo test --workspace` |
 | Coverage | See CI | `make coverage` |
-| Platforms | 1 of 6 | NativeAdapter only |
+| Platforms | 4 of 6 | Native, Linux, macOS, Container |
 
 ## What Works (Falsifiable)
 
-### duende-core (309 tests)
+### duende-core (334 tests)
 
 - **Daemon trait**: Async lifecycle with `init()`, `run()`, `shutdown()`, `health_check()`
 - **DaemonManager**: Registration, status tracking, signal forwarding
 - **RestartPolicy**: `Never`, `Always`, `OnFailure` with max retries
 - **BackoffConfig**: Exponential backoff (1s initial, 2x multiplier, 60s max)
 - **NativeAdapter**: Process spawning via `tokio::process`, signal delivery
+- **SystemdAdapter** (Linux): Transient units via `systemd-run`, `systemctl` commands
+- **LaunchdAdapter** (macOS): Plist files via `launchctl bootstrap/bootout`
+- **ContainerAdapter**: Docker/Podman/containerd via CLI commands
 
 ```rust
 use duende_core::{Daemon, DaemonConfig, DaemonContext, DaemonId, DaemonMetrics, ExitReason, HealthStatus, DaemonError};
@@ -107,22 +110,23 @@ lock_with_config(config)?;
 - **ChaosInjector**: Latency and error injection
 - **MockDaemon**: Configurable test doubles
 
-## What Does NOT Work (Stubs)
+## Platform Support
 
-| Adapter | Status | Ticket |
-|---------|--------|--------|
-| SystemdAdapter | Returns `NotSupported` | DP-002 |
-| LaunchdAdapter | Returns `NotSupported` | DP-004 |
-| ContainerAdapter | Returns `NotSupported` | DP-005 |
-| PepitaAdapter | Returns `NotSupported` | DP-006 |
-| WosAdapter | Returns `NotSupported` | DP-007 |
+| Adapter | Status | Platform | Falsification |
+|---------|--------|----------|---------------|
+| NativeAdapter | Implemented | All | `cargo run --example daemon` |
+| SystemdAdapter | Implemented | Linux | `systemctl --user status duende-*` |
+| LaunchdAdapter | Implemented | macOS | `launchctl list \| grep duende` |
+| ContainerAdapter | Implemented | All | `docker ps \| grep duende` |
+| PepitaAdapter | Stub | - | Returns `NotSupported` |
+| WosAdapter | Stub | - | Returns `NotSupported` |
 
 ## Crate Structure
 
 ```
 duende/
 ├── crates/
-│   ├── duende-core/       # 309 tests - Daemon trait, manager, native adapter
+│   ├── duende-core/       # 334 tests - Daemon trait, manager, platform adapters
 │   ├── duende-mlock/      # 44 tests  - mlockall() for swap safety
 │   ├── duende-observe/    # 55 tests  - /proc monitoring, syscall tracing
 │   ├── duende-platform/   # 29 tests  - Platform detection, memory helpers
@@ -134,7 +138,7 @@ duende/
 
 ```bash
 cargo build                    # Build
-cargo test --workspace         # Run 527 tests
+cargo test --workspace         # Run 665 tests
 make tier1                     # fmt + clippy + check (<3s)
 make tier2                     # tests + deny (1-5min)
 make coverage                  # Coverage report
@@ -142,11 +146,15 @@ make coverage                  # Coverage report
 
 ## Roadmap
 
-| ID | Title | Priority | Falsification Criteria |
-|----|-------|----------|------------------------|
-| DP-001 | mlock() Memory Locking | Critical | `duende_mlock::lock_all()` returns `Ok(Locked{..})` |
-| DP-002 | Linux systemd Adapter | High | `systemctl status` shows managed unit |
-| DP-003 | trueno-ublk Integration | High | ublk device serves I/O with memory locked |
+| ID | Title | Status | Falsification Criteria |
+|----|-------|--------|------------------------|
+| DP-001 | mlock() Memory Locking | Done | `duende_mlock::lock_all()` returns `Ok(Locked{..})` |
+| DP-002 | Linux systemd Adapter | Done | `systemctl --user status` shows managed unit |
+| DP-003 | trueno-ublk Integration | In Progress | ublk device serves I/O with memory locked |
+| DP-004 | macOS launchd Adapter | Done | `launchctl list` shows managed service |
+| DP-005 | Container Adapter | Done | `docker ps` shows managed container |
+| DP-006 | pepita MicroVM Adapter | Planned | VM spawns with vsock communication |
+| DP-007 | WOS Adapter | Planned | WebAssembly process managed via WOS API |
 
 ## License
 

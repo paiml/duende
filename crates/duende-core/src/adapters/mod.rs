@@ -5,15 +5,25 @@
 //! # Available Adapters
 //!
 //! - [`NativeAdapter`]: Fork/exec-based native process management (fully implemented)
-//! - [`SystemdAdapter`]: Linux systemd integration (stub - returns `NotSupported`)
+//! - [`SystemdAdapter`]: Linux systemd integration (implemented on Linux)
 //! - [`LaunchdAdapter`]: macOS launchd integration (stub - returns `NotSupported`)
 //! - [`ContainerAdapter`]: Docker/OCI container management (stub - returns `NotSupported`)
 //! - [`PepitaAdapter`]: pepita MicroVM integration (stub - returns `NotSupported`)
 //! - [`WosAdapter`]: WOS (WebAssembly OS) integration (stub - returns `NotSupported`)
 
 mod native;
+#[cfg(target_os = "linux")]
+mod systemd;
+#[cfg(target_os = "macos")]
+mod launchd;
+mod container;
 
 pub use native::NativeAdapter;
+#[cfg(target_os = "linux")]
+pub use systemd::SystemdAdapter as SystemdAdapterImpl;
+#[cfg(target_os = "macos")]
+pub use launchd::{LaunchdAdapter as LaunchdAdapterImpl, LaunchdDomain};
+pub use container::{ContainerAdapter, ContainerRuntime};
 
 // Platform-specific adapters (stubs for now)
 
@@ -28,202 +38,158 @@ use async_trait::async_trait;
 // SystemdAdapter (Linux)
 // =============================================================================
 
-/// Linux systemd adapter stub.
-///
-/// This adapter returns `NotSupported` for all operations.
-/// Full systemd integration is tracked in roadmap.yaml (DP-002).
-pub struct SystemdAdapter {
-    _unit_dir: std::path::PathBuf,
-}
+// On Linux, use the real implementation
+#[cfg(target_os = "linux")]
+pub use systemd::SystemdAdapter;
 
-impl SystemdAdapter {
-    /// Creates a new systemd adapter.
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            _unit_dir: std::path::PathBuf::from("/etc/systemd/system"),
+// On non-Linux platforms, provide a stub
+#[cfg(not(target_os = "linux"))]
+mod systemd_stub {
+    use super::*;
+
+    /// Linux systemd adapter stub (non-Linux platforms).
+    ///
+    /// This adapter returns `NotSupported` for all operations.
+    /// Use on Linux for full systemd integration.
+    pub struct SystemdAdapter {
+        _unit_dir: std::path::PathBuf,
+    }
+
+    impl SystemdAdapter {
+        /// Creates a new systemd adapter.
+        #[must_use]
+        pub fn new() -> Self {
+            Self {
+                _unit_dir: std::path::PathBuf::from("/etc/systemd/system"),
+            }
+        }
+
+        /// Creates a user-mode adapter (stub on non-Linux).
+        #[must_use]
+        pub fn user() -> Self {
+            Self::new()
+        }
+
+        /// Creates a system-mode adapter (stub on non-Linux).
+        #[must_use]
+        pub fn system() -> Self {
+            Self::new()
+        }
+    }
+
+    impl Default for SystemdAdapter {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
+    #[async_trait]
+    impl PlatformAdapter for SystemdAdapter {
+        fn platform(&self) -> Platform {
+            Platform::Linux
+        }
+
+        async fn spawn(&self, _daemon: Box<dyn Daemon>) -> PlatformResult<DaemonHandle> {
+            Err(PlatformError::not_supported(Platform::Linux, "spawn"))
+        }
+
+        async fn signal(&self, _handle: &DaemonHandle, _sig: Signal) -> PlatformResult<()> {
+            Err(PlatformError::not_supported(Platform::Linux, "signal"))
+        }
+
+        async fn status(&self, _handle: &DaemonHandle) -> PlatformResult<DaemonStatus> {
+            Err(PlatformError::not_supported(Platform::Linux, "status"))
+        }
+
+        async fn attach_tracer(&self, _handle: &DaemonHandle) -> PlatformResult<TracerHandle> {
+            Err(PlatformError::not_supported(Platform::Linux, "attach_tracer"))
         }
     }
 }
 
-impl Default for SystemdAdapter {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[async_trait]
-impl PlatformAdapter for SystemdAdapter {
-    fn platform(&self) -> Platform {
-        Platform::Linux
-    }
-
-    async fn spawn(&self, _daemon: Box<dyn Daemon>) -> PlatformResult<DaemonHandle> {
-        Err(PlatformError::not_supported(Platform::Linux, "spawn"))
-    }
-
-    async fn signal(&self, _handle: &DaemonHandle, _sig: Signal) -> PlatformResult<()> {
-        Err(PlatformError::not_supported(Platform::Linux, "signal"))
-    }
-
-    async fn status(&self, _handle: &DaemonHandle) -> PlatformResult<DaemonStatus> {
-        Err(PlatformError::not_supported(Platform::Linux, "status"))
-    }
-
-    async fn attach_tracer(&self, _handle: &DaemonHandle) -> PlatformResult<TracerHandle> {
-        Err(PlatformError::not_supported(Platform::Linux, "attach_tracer"))
-    }
-}
+#[cfg(not(target_os = "linux"))]
+pub use systemd_stub::SystemdAdapter;
 
 // =============================================================================
 // LaunchdAdapter (macOS)
 // =============================================================================
 
-/// macOS launchd adapter stub.
-///
-/// This adapter returns `NotSupported` for all operations.
-/// Full launchd integration is tracked in roadmap.yaml (DP-004).
-pub struct LaunchdAdapter {
-    _plist_dir: std::path::PathBuf,
-}
+// On macOS, use the real implementation
+#[cfg(target_os = "macos")]
+pub use launchd::LaunchdAdapter;
 
-impl LaunchdAdapter {
-    /// Creates a new launchd adapter.
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            _plist_dir: std::path::PathBuf::from("/Library/LaunchDaemons"),
+// On non-macOS platforms, provide a stub
+#[cfg(not(target_os = "macos"))]
+mod launchd_stub {
+    use super::*;
+
+    /// macOS launchd adapter stub (non-macOS platforms).
+    ///
+    /// This adapter returns `NotSupported` for all operations.
+    /// Use on macOS for full launchd integration.
+    pub struct LaunchdAdapter {
+        _plist_dir: std::path::PathBuf,
+    }
+
+    impl LaunchdAdapter {
+        /// Creates a new launchd adapter.
+        #[must_use]
+        pub fn new() -> Self {
+            Self {
+                _plist_dir: std::path::PathBuf::from("/Library/LaunchDaemons"),
+            }
+        }
+
+        /// Creates a user-mode adapter (stub on non-macOS).
+        #[must_use]
+        pub fn user() -> Self {
+            Self::new()
+        }
+
+        /// Creates a system-mode adapter (stub on non-macOS).
+        #[must_use]
+        pub fn system() -> Self {
+            Self::new()
+        }
+    }
+
+    impl Default for LaunchdAdapter {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
+    #[async_trait]
+    impl PlatformAdapter for LaunchdAdapter {
+        fn platform(&self) -> Platform {
+            Platform::MacOS
+        }
+
+        async fn spawn(&self, _daemon: Box<dyn Daemon>) -> PlatformResult<DaemonHandle> {
+            Err(PlatformError::not_supported(Platform::MacOS, "spawn"))
+        }
+
+        async fn signal(&self, _handle: &DaemonHandle, _sig: Signal) -> PlatformResult<()> {
+            Err(PlatformError::not_supported(Platform::MacOS, "signal"))
+        }
+
+        async fn status(&self, _handle: &DaemonHandle) -> PlatformResult<DaemonStatus> {
+            Err(PlatformError::not_supported(Platform::MacOS, "status"))
+        }
+
+        async fn attach_tracer(&self, _handle: &DaemonHandle) -> PlatformResult<TracerHandle> {
+            Err(PlatformError::not_supported(Platform::MacOS, "attach_tracer"))
         }
     }
 }
 
-impl Default for LaunchdAdapter {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[async_trait]
-impl PlatformAdapter for LaunchdAdapter {
-    fn platform(&self) -> Platform {
-        Platform::MacOS
-    }
-
-    async fn spawn(&self, _daemon: Box<dyn Daemon>) -> PlatformResult<DaemonHandle> {
-        Err(PlatformError::not_supported(Platform::MacOS, "spawn"))
-    }
-
-    async fn signal(&self, _handle: &DaemonHandle, _sig: Signal) -> PlatformResult<()> {
-        Err(PlatformError::not_supported(Platform::MacOS, "signal"))
-    }
-
-    async fn status(&self, _handle: &DaemonHandle) -> PlatformResult<DaemonStatus> {
-        Err(PlatformError::not_supported(Platform::MacOS, "status"))
-    }
-
-    async fn attach_tracer(&self, _handle: &DaemonHandle) -> PlatformResult<TracerHandle> {
-        Err(PlatformError::not_supported(Platform::MacOS, "attach_tracer"))
-    }
-}
+#[cfg(not(target_os = "macos"))]
+pub use launchd_stub::LaunchdAdapter;
 
 // =============================================================================
-// ContainerAdapter (Docker/OCI)
+// ContainerAdapter (Docker/OCI) - Implemented in container.rs
 // =============================================================================
-
-/// Container runtime type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ContainerRuntime {
-    /// Docker runtime.
-    Docker,
-    /// Podman runtime.
-    Podman,
-    /// containerd runtime.
-    Containerd,
-}
-
-impl ContainerRuntime {
-    /// Returns the runtime name.
-    #[must_use]
-    pub const fn name(&self) -> &'static str {
-        match self {
-            Self::Docker => "docker",
-            Self::Podman => "podman",
-            Self::Containerd => "containerd",
-        }
-    }
-}
-
-/// Docker/OCI container adapter stub.
-///
-/// This adapter returns `NotSupported` for all operations.
-/// Full container integration is tracked in roadmap.yaml (DP-005).
-pub struct ContainerAdapter {
-    runtime: ContainerRuntime,
-}
-
-impl ContainerAdapter {
-    /// Creates a new container adapter with Docker runtime.
-    #[must_use]
-    pub fn docker() -> Self {
-        Self {
-            runtime: ContainerRuntime::Docker,
-        }
-    }
-
-    /// Creates a new container adapter with Podman runtime.
-    #[must_use]
-    pub fn podman() -> Self {
-        Self {
-            runtime: ContainerRuntime::Podman,
-        }
-    }
-
-    /// Creates a new container adapter with containerd runtime.
-    #[must_use]
-    pub fn containerd() -> Self {
-        Self {
-            runtime: ContainerRuntime::Containerd,
-        }
-    }
-
-    /// Returns the container runtime.
-    #[must_use]
-    pub const fn runtime(&self) -> ContainerRuntime {
-        self.runtime
-    }
-}
-
-impl Default for ContainerAdapter {
-    fn default() -> Self {
-        Self::docker()
-    }
-}
-
-#[async_trait]
-impl PlatformAdapter for ContainerAdapter {
-    fn platform(&self) -> Platform {
-        Platform::Container
-    }
-
-    async fn spawn(&self, _daemon: Box<dyn Daemon>) -> PlatformResult<DaemonHandle> {
-        Err(PlatformError::not_supported(Platform::Container, "spawn"))
-    }
-
-    async fn signal(&self, _handle: &DaemonHandle, _sig: Signal) -> PlatformResult<()> {
-        Err(PlatformError::not_supported(Platform::Container, "signal"))
-    }
-
-    async fn status(&self, _handle: &DaemonHandle) -> PlatformResult<DaemonStatus> {
-        Err(PlatformError::not_supported(Platform::Container, "status"))
-    }
-
-    async fn attach_tracer(&self, _handle: &DaemonHandle) -> PlatformResult<TracerHandle> {
-        Err(PlatformError::not_supported(
-            Platform::Container,
-            "attach_tracer",
-        ))
-    }
-}
+// ContainerAdapter and ContainerRuntime are now exported from container.rs
 
 // =============================================================================
 // PepitaAdapter (MicroVM)
@@ -385,12 +351,29 @@ mod tests {
         assert_eq!(adapter.platform(), Platform::Linux);
     }
 
+    // On Linux, systemd adapter is a real implementation
+    // On other platforms, it's a stub that returns NotSupported
+    #[cfg(not(target_os = "linux"))]
     #[tokio::test]
-    async fn test_systemd_adapter_not_supported() {
+    async fn test_systemd_adapter_not_supported_stub() {
         let adapter = SystemdAdapter::new();
         let result = adapter.spawn(Box::new(TestDaemon::new())).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().is_not_supported());
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_systemd_adapter_spawn_requires_systemd() {
+        // On Linux, spawn may fail for various reasons (not running as root,
+        // systemd not available, etc.) but should not return NotSupported
+        let adapter = SystemdAdapter::new();
+        let result = adapter.spawn(Box::new(TestDaemon::new())).await;
+        // The result might be Ok (if systemd is available) or Err (if not)
+        // but if it's Err, it shouldn't be NotSupported
+        if let Err(e) = result {
+            assert!(!e.is_not_supported(), "Linux systemd adapter should not return NotSupported");
+        }
     }
 
     // =========================================================================
@@ -502,26 +485,29 @@ mod tests {
     // =========================================================================
 
     #[tokio::test]
-    async fn test_container_adapter_not_supported() {
+    async fn test_container_adapter_operations_not_stub() {
+        // Container adapter is a real implementation, not a stub
         let adapter = ContainerAdapter::docker();
-        let handle = DaemonHandle::container(DaemonId::new(), "docker", "abc123");
+        let handle = DaemonHandle::container(DaemonId::new(), "docker", "nonexistent-container-xyz");
 
-        let result = adapter.signal(&handle, Signal::Term).await;
-        assert!(result.unwrap_err().is_not_supported());
+        // These may fail (container doesn't exist, docker not installed)
+        // but should not return NotSupported
+        if let Err(e) = adapter.signal(&handle, Signal::Term).await {
+            assert!(!e.is_not_supported(), "signal should not return NotSupported");
+        }
 
-        let result = adapter.status(&handle).await;
-        assert!(result.unwrap_err().is_not_supported());
-
-        let result = adapter.attach_tracer(&handle).await;
-        assert!(result.unwrap_err().is_not_supported());
+        // status() returns Stopped for non-existent containers
+        let status_result = adapter.status(&handle).await;
+        assert!(status_result.is_ok() || !status_result.unwrap_err().is_not_supported());
     }
 
     // =========================================================================
     // SystemdAdapter additional tests
     // =========================================================================
 
+    #[cfg(not(target_os = "linux"))]
     #[tokio::test]
-    async fn test_systemd_adapter_all_not_supported() {
+    async fn test_systemd_adapter_all_not_supported_stub() {
         let adapter = SystemdAdapter::new();
         let handle = DaemonHandle::systemd(DaemonId::new(), "test.service");
 
@@ -533,6 +519,23 @@ mod tests {
 
         let result = adapter.attach_tracer(&handle).await;
         assert!(result.unwrap_err().is_not_supported());
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_systemd_adapter_operations_not_stub() {
+        // On Linux, operations should not return NotSupported
+        let adapter = SystemdAdapter::new();
+        let handle = DaemonHandle::systemd(DaemonId::new(), "nonexistent-unit.service");
+
+        // These may fail (unit doesn't exist) but should not return NotSupported
+        if let Err(e) = adapter.signal(&handle, Signal::Term).await {
+            assert!(!e.is_not_supported(), "signal should not return NotSupported on Linux");
+        }
+
+        // status() returns a status even for non-existent units (Stopped)
+        let status_result = adapter.status(&handle).await;
+        assert!(status_result.is_ok() || !status_result.unwrap_err().is_not_supported());
     }
 
     // =========================================================================
