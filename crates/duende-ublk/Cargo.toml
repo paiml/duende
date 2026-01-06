@@ -26,6 +26,8 @@ thiserror = "2.0"
 [dev-dependencies]
 # Property-based testing
 proptest = "1.5"
+# Temporary directories for testing
+tempfile = "3"
 
 [[example]]
 name = "cleanup"
