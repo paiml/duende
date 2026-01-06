@@ -507,6 +507,15 @@ mod tests {
     }
 
     #[test]
+    fn test_wos_adapter_with_priority_boundary() {
+        // Test all valid priority levels
+        for priority in 0..=7 {
+            let adapter = WosAdapter::with_priority(priority);
+            assert_eq!(adapter.default_priority(), priority);
+        }
+    }
+
+    #[test]
     #[should_panic(expected = "WOS priority must be 0-7")]
     fn test_wos_adapter_invalid_priority() {
         let _ = WosAdapter::with_priority(8);
@@ -526,9 +535,30 @@ mod tests {
     }
 
     #[test]
+    fn test_allocate_pid_monotonic() {
+        let pids: Vec<u32> = (0..10).map(|_| WosAdapter::allocate_pid()).collect();
+        for i in 1..pids.len() {
+            assert!(pids[i] > pids[i - 1], "PIDs must be monotonically increasing");
+        }
+    }
+
+    #[test]
     fn test_signal_number() {
         assert_eq!(WosAdapter::signal_number(Signal::Term), 15);
         assert_eq!(WosAdapter::signal_number(Signal::Kill), 9);
+    }
+
+    #[test]
+    fn test_signal_number_all_signals() {
+        assert_eq!(WosAdapter::signal_number(Signal::Hup), 1);
+        assert_eq!(WosAdapter::signal_number(Signal::Int), 2);
+        assert_eq!(WosAdapter::signal_number(Signal::Quit), 3);
+        assert_eq!(WosAdapter::signal_number(Signal::Kill), 9);
+        assert_eq!(WosAdapter::signal_number(Signal::Usr1), 10);
+        assert_eq!(WosAdapter::signal_number(Signal::Usr2), 12);
+        assert_eq!(WosAdapter::signal_number(Signal::Term), 15);
+        assert_eq!(WosAdapter::signal_number(Signal::Cont), 18);
+        assert_eq!(WosAdapter::signal_number(Signal::Stop), 19);
     }
 
     #[test]
@@ -541,11 +571,73 @@ mod tests {
     }
 
     #[test]
+    fn test_priority_from_name_all_variants() {
+        // Level 0
+        assert_eq!(WosAdapter::priority_from_name("critical"), Some(0));
+        assert_eq!(WosAdapter::priority_from_name("CRITICAL"), Some(0));
+
+        // Level 1
+        assert_eq!(WosAdapter::priority_from_name("high"), Some(1));
+        assert_eq!(WosAdapter::priority_from_name("HIGH"), Some(1));
+
+        // Level 2 - various separators
+        assert_eq!(WosAdapter::priority_from_name("above_normal"), Some(2));
+        assert_eq!(WosAdapter::priority_from_name("above-normal"), Some(2));
+        assert_eq!(WosAdapter::priority_from_name("ABOVE_NORMAL"), Some(2));
+        assert_eq!(WosAdapter::priority_from_name("Above-Normal"), Some(2));
+
+        // Level 3 - normal plus variants
+        assert_eq!(WosAdapter::priority_from_name("normal_plus"), Some(3));
+        assert_eq!(WosAdapter::priority_from_name("normal-plus"), Some(3));
+        assert_eq!(WosAdapter::priority_from_name("normal+"), Some(3));
+        assert_eq!(WosAdapter::priority_from_name("NORMAL+"), Some(3));
+
+        // Level 4
+        assert_eq!(WosAdapter::priority_from_name("normal"), Some(4));
+        assert_eq!(WosAdapter::priority_from_name("NORMAL"), Some(4));
+
+        // Level 5
+        assert_eq!(WosAdapter::priority_from_name("below_normal"), Some(5));
+        assert_eq!(WosAdapter::priority_from_name("below-normal"), Some(5));
+        assert_eq!(WosAdapter::priority_from_name("BELOW_NORMAL"), Some(5));
+
+        // Level 6
+        assert_eq!(WosAdapter::priority_from_name("low"), Some(6));
+        assert_eq!(WosAdapter::priority_from_name("LOW"), Some(6));
+
+        // Level 7
+        assert_eq!(WosAdapter::priority_from_name("idle"), Some(7));
+        assert_eq!(WosAdapter::priority_from_name("IDLE"), Some(7));
+
+        // Invalid
+        assert_eq!(WosAdapter::priority_from_name(""), None);
+        assert_eq!(WosAdapter::priority_from_name("unknown"), None);
+        assert_eq!(WosAdapter::priority_from_name("realtime"), None);
+    }
+
+    #[test]
     fn test_priority_name() {
         assert_eq!(WosAdapter::priority_name(0), "critical");
         assert_eq!(WosAdapter::priority_name(4), "normal");
         assert_eq!(WosAdapter::priority_name(7), "idle");
         assert_eq!(WosAdapter::priority_name(8), "unknown");
+    }
+
+    #[test]
+    fn test_priority_name_all_levels() {
+        assert_eq!(WosAdapter::priority_name(0), "critical");
+        assert_eq!(WosAdapter::priority_name(1), "high");
+        assert_eq!(WosAdapter::priority_name(2), "above_normal");
+        assert_eq!(WosAdapter::priority_name(3), "normal_plus");
+        assert_eq!(WosAdapter::priority_name(4), "normal");
+        assert_eq!(WosAdapter::priority_name(5), "below_normal");
+        assert_eq!(WosAdapter::priority_name(6), "low");
+        assert_eq!(WosAdapter::priority_name(7), "idle");
+
+        // Out of range
+        assert_eq!(WosAdapter::priority_name(8), "unknown");
+        assert_eq!(WosAdapter::priority_name(100), "unknown");
+        assert_eq!(WosAdapter::priority_name(255), "unknown");
     }
 
     #[test]
@@ -557,6 +649,228 @@ mod tests {
             Some(137)
         );
         assert_eq!(WosAdapter::extract_exit_code("no exit code"), None);
+    }
+
+    #[test]
+    fn test_extract_exit_code_various_formats() {
+        // With space after colon
+        assert_eq!(WosAdapter::extract_exit_code(r#""exit_code": 0"#), Some(0));
+        assert_eq!(WosAdapter::extract_exit_code(r#""exit_code": 42"#), Some(42));
+        assert_eq!(WosAdapter::extract_exit_code(r#""exit_code": 255"#), Some(255));
+
+        // Without space after colon
+        assert_eq!(WosAdapter::extract_exit_code(r#""exit_code":0"#), Some(0));
+        assert_eq!(WosAdapter::extract_exit_code(r#""exit_code":1"#), Some(1));
+
+        // Negative exit codes
+        assert_eq!(WosAdapter::extract_exit_code(r#""exit_code": -1"#), Some(-1));
+        assert_eq!(WosAdapter::extract_exit_code(r#""exit_code":-15"#), Some(-15));
+
+        // In larger JSON context
+        assert_eq!(
+            WosAdapter::extract_exit_code(r#"{"state": "exited", "exit_code": 128}"#),
+            Some(128)
+        );
+
+        // Edge cases
+        assert_eq!(WosAdapter::extract_exit_code(""), None);
+        assert_eq!(WosAdapter::extract_exit_code("exit_code"), None);
+        assert_eq!(WosAdapter::extract_exit_code(r#""exit_code": "#), None);
+        assert_eq!(WosAdapter::extract_exit_code(r#""exit_code":"#), None);
+    }
+
+    #[test]
+    fn test_process_state_equality() {
+        assert_eq!(ProcessState::Ready, ProcessState::Ready);
+        assert_eq!(ProcessState::Running, ProcessState::Running);
+        assert_eq!(ProcessState::Waiting, ProcessState::Waiting);
+        assert_eq!(ProcessState::Stopped, ProcessState::Stopped);
+        assert_eq!(ProcessState::Exited(0), ProcessState::Exited(0));
+        assert_eq!(ProcessState::Killed(9), ProcessState::Killed(9));
+
+        // Different values should not be equal
+        assert_ne!(ProcessState::Exited(0), ProcessState::Exited(1));
+        assert_ne!(ProcessState::Killed(9), ProcessState::Killed(15));
+        assert_ne!(ProcessState::Ready, ProcessState::Running);
+    }
+
+    #[test]
+    fn test_process_state_clone() {
+        let states = [
+            ProcessState::Ready,
+            ProcessState::Running,
+            ProcessState::Waiting,
+            ProcessState::Stopped,
+            ProcessState::Exited(0),
+            ProcessState::Exited(1),
+            ProcessState::Killed(9),
+            ProcessState::Killed(15),
+        ];
+
+        for state in states {
+            let cloned = state;
+            assert_eq!(state, cloned);
+        }
+    }
+
+    #[test]
+    fn test_process_state_debug() {
+        assert!(format!("{:?}", ProcessState::Ready).contains("Ready"));
+        assert!(format!("{:?}", ProcessState::Running).contains("Running"));
+        assert!(format!("{:?}", ProcessState::Waiting).contains("Waiting"));
+        assert!(format!("{:?}", ProcessState::Stopped).contains("Stopped"));
+        assert!(format!("{:?}", ProcessState::Exited(42)).contains("42"));
+        assert!(format!("{:?}", ProcessState::Killed(9)).contains("9"));
+    }
+
+    #[test]
+    fn test_process_info_clone() {
+        let info = ProcessInfo {
+            pid: 123,
+            parent_pid: 1,
+            name: "test-daemon".to_string(),
+            priority: 4,
+            state: ProcessState::Running,
+        };
+
+        let cloned = info.clone();
+        assert_eq!(cloned.pid, 123);
+        assert_eq!(cloned.parent_pid, 1);
+        assert_eq!(cloned.name, "test-daemon");
+        assert_eq!(cloned.priority, 4);
+        assert_eq!(cloned.state, ProcessState::Running);
+    }
+
+    #[test]
+    fn test_process_info_debug() {
+        let info = ProcessInfo {
+            pid: 42,
+            parent_pid: 1,
+            name: "debug-test".to_string(),
+            priority: 2,
+            state: ProcessState::Waiting,
+        };
+
+        let debug_str = format!("{:?}", info);
+        assert!(debug_str.contains("42"));
+        assert!(debug_str.contains("debug-test"));
+        assert!(debug_str.contains("Waiting"));
+    }
+
+    #[test]
+    fn test_is_wos_environment_not_wos() {
+        // We're not running in WOS, so this should be false
+        // (unless WOS_KERNEL or WOS_VERSION env vars are set)
+        let in_wos = WosAdapter::is_wos_environment();
+        // Just verify it doesn't panic
+        let _ = in_wos;
+    }
+
+    #[tokio::test]
+    async fn test_wos_ctl_available_not_installed() {
+        // wos-ctl is likely not installed in test environment
+        let available = WosAdapter::wos_ctl_available().await;
+        // Just verify it doesn't panic and returns a boolean
+        let _ = available;
+    }
+
+    #[tokio::test]
+    async fn test_wos_adapter_list_processes_empty() {
+        let adapter = WosAdapter::new();
+        // Without WOS environment, list should return local (empty) table
+        if !WosAdapter::is_wos_environment() && !WosAdapter::wos_ctl_available().await {
+            let processes = adapter.list_processes().await;
+            // Either returns Ok with empty list or an error
+            match processes {
+                Ok(list) => assert!(list.is_empty()),
+                Err(_) => {} // Also acceptable if wos-ctl not found
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_wos_adapter_set_priority_invalid() {
+        let adapter = WosAdapter::new();
+        // Priority 8 is invalid
+        let result = adapter.set_priority(123, 8).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("0-7"));
+    }
+
+    #[tokio::test]
+    async fn test_wos_adapter_set_priority_valid_range() {
+        let adapter = WosAdapter::new();
+        // All priorities 0-7 should be valid (but may fail if pid doesn't exist)
+        for priority in 0..=7 {
+            let result = adapter.set_priority(99999, priority).await;
+            // Should not fail with config error (may fail for other reasons)
+            if let Err(e) = &result {
+                assert!(
+                    !e.to_string().contains("0-7"),
+                    "Priority {} should be valid",
+                    priority
+                );
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_wos_adapter_signal_invalid_handle() {
+        let adapter = WosAdapter::new();
+        // Create a handle without a PID (container type doesn't have pid())
+        let handle = DaemonHandle::container(crate::types::DaemonId::new(), "docker", "test-container");
+        let result = adapter.signal(&handle, Signal::Term).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_wos_adapter_status_invalid_handle() {
+        let adapter = WosAdapter::new();
+        let handle = DaemonHandle::container(crate::types::DaemonId::new(), "docker", "test-container");
+        let result = adapter.status(&handle).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_wos_adapter_attach_tracer_invalid_handle() {
+        let adapter = WosAdapter::new();
+        let handle = DaemonHandle::container(crate::types::DaemonId::new(), "docker", "test-container");
+        let result = adapter.attach_tracer(&handle).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_wos_adapter_attach_tracer_pid_zero() {
+        let adapter = WosAdapter::new();
+        // WOS handle with pid 0 should fail
+        let handle = DaemonHandle::wos(crate::types::DaemonId::new(), 0);
+        let result = adapter.attach_tracer(&handle).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("not running"));
+    }
+
+    #[tokio::test]
+    async fn test_wos_adapter_attach_tracer_valid_pid() {
+        let adapter = WosAdapter::new();
+        let id = crate::types::DaemonId::new();
+        let handle = DaemonHandle::wos(id, 123);
+        let result = adapter.attach_tracer(&handle).await;
+        assert!(result.is_ok());
+        let tracer = result.unwrap();
+        assert_eq!(tracer.daemon_id(), id);
+    }
+
+    #[tokio::test]
+    async fn test_wos_adapter_status_unknown_pid() {
+        let adapter = WosAdapter::new();
+        let handle = DaemonHandle::wos(crate::types::DaemonId::new(), 99999);
+        // Without WOS environment, should return Stopped
+        if !WosAdapter::is_wos_environment() && !WosAdapter::wos_ctl_available().await {
+            let status = adapter.status(&handle).await.unwrap();
+            assert_eq!(status, DaemonStatus::Stopped);
+        }
     }
 
     #[tokio::test]
@@ -611,5 +925,20 @@ mod tests {
         // Should fail because WOS is not available
         let err = result.unwrap_err();
         assert!(err.to_string().contains("WOS") || err.to_string().contains("wos-ctl"));
+    }
+
+    #[test]
+    fn test_priority_roundtrip() {
+        // Verify that priority_name and priority_from_name are consistent
+        for level in 0..=7 {
+            let name = WosAdapter::priority_name(level);
+            let parsed = WosAdapter::priority_from_name(name);
+            assert_eq!(
+                parsed,
+                Some(level),
+                "Roundtrip failed for level {}",
+                level
+            );
+        }
     }
 }

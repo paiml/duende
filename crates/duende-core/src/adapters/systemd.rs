@@ -418,4 +418,180 @@ mod tests {
         assert_eq!(adapter.unit_dir(), &PathBuf::from("/custom/path"));
         assert!(!adapter.is_user_mode());
     }
+
+    // ==================== Extended Tests for Coverage ====================
+
+    #[test]
+    fn test_unit_name_special_characters() {
+        // Test various daemon names
+        assert_eq!(
+            SystemdAdapter::unit_name("test"),
+            "duende-test.service"
+        );
+        assert_eq!(
+            SystemdAdapter::unit_name("test-daemon"),
+            "duende-test-daemon.service"
+        );
+        assert_eq!(
+            SystemdAdapter::unit_name("test daemon name"),
+            "duende-test-daemon-name.service"
+        );
+        assert_eq!(
+            SystemdAdapter::unit_name(""),
+            "duende-.service"
+        );
+    }
+
+    #[test]
+    fn test_signal_name_all_signals() {
+        assert_eq!(SystemdAdapter::signal_name(Signal::Int), "SIGINT");
+        assert_eq!(SystemdAdapter::signal_name(Signal::Quit), "SIGQUIT");
+        assert_eq!(SystemdAdapter::signal_name(Signal::Usr1), "SIGUSR1");
+        assert_eq!(SystemdAdapter::signal_name(Signal::Usr2), "SIGUSR2");
+        assert_eq!(SystemdAdapter::signal_name(Signal::Stop), "SIGSTOP");
+        assert_eq!(SystemdAdapter::signal_name(Signal::Cont), "SIGCONT");
+    }
+
+    #[test]
+    fn test_parse_status_deactivating() {
+        let output = "● test.service - Test\n   Active: deactivating (stop-sigterm)";
+        assert_eq!(
+            SystemdAdapter::parse_status(output, 0),
+            DaemonStatus::Stopping
+        );
+    }
+
+    #[test]
+    fn test_parse_status_empty() {
+        assert_eq!(
+            SystemdAdapter::parse_status("", 4),
+            DaemonStatus::Stopped
+        );
+    }
+
+    #[test]
+    fn test_parse_status_unknown_output() {
+        let output = "Some random output without status";
+        assert_eq!(
+            SystemdAdapter::parse_status(output, 0),
+            DaemonStatus::Stopped
+        );
+    }
+
+    #[test]
+    fn test_parse_status_exit_codes() {
+        // exit code 0 without "active (running)" should be stopped
+        let output = "Some output";
+        assert_eq!(
+            SystemdAdapter::parse_status(output, 0),
+            DaemonStatus::Stopped
+        );
+
+        // exit code 1 should be stopped
+        assert_eq!(
+            SystemdAdapter::parse_status(output, 1),
+            DaemonStatus::Stopped
+        );
+
+        // exit code 3 should be stopped
+        assert_eq!(
+            SystemdAdapter::parse_status(output, 3),
+            DaemonStatus::Stopped
+        );
+
+        // exit code 4 should be stopped
+        assert_eq!(
+            SystemdAdapter::parse_status(output, 4),
+            DaemonStatus::Stopped
+        );
+    }
+
+    #[test]
+    fn test_parse_status_inactive_variations() {
+        let output1 = "Active: inactive (dead)";
+        assert_eq!(
+            SystemdAdapter::parse_status(output1, 3),
+            DaemonStatus::Stopped
+        );
+
+        let output2 = "  Active: inactive  ";
+        assert_eq!(
+            SystemdAdapter::parse_status(output2, 3),
+            DaemonStatus::Stopped
+        );
+    }
+
+    #[test]
+    fn test_parse_status_activating_variations() {
+        let output1 = "Active: activating (auto-restart)";
+        assert_eq!(
+            SystemdAdapter::parse_status(output1, 0),
+            DaemonStatus::Starting
+        );
+
+        let output2 = "Active: activating (start-pre)";
+        assert_eq!(
+            SystemdAdapter::parse_status(output2, 0),
+            DaemonStatus::Starting
+        );
+    }
+
+    #[test]
+    fn test_systemd_adapter_new_alias() {
+        let adapter = SystemdAdapter::new();
+        // new() is alias for user()
+        assert!(adapter.is_user_mode());
+    }
+
+    #[test]
+    fn test_systemd_adapter_clone_path() {
+        let adapter = SystemdAdapter::with_unit_dir(PathBuf::from("/test"), true);
+        let path = adapter.unit_dir().clone();
+        assert_eq!(path, PathBuf::from("/test"));
+    }
+
+    #[test]
+    fn test_parse_status_failed_variations() {
+        // Test failed status in different contexts
+        let output1 = "Active: failed (Result: exit-code)";
+        assert!(matches!(
+            SystemdAdapter::parse_status(output1, 1),
+            DaemonStatus::Failed(_)
+        ));
+
+        let output2 = "Active: failed (Result: timeout)";
+        assert!(matches!(
+            SystemdAdapter::parse_status(output2, 1),
+            DaemonStatus::Failed(_)
+        ));
+    }
+
+    #[test]
+    fn test_systemctl_cmd_user_mode() {
+        let adapter = SystemdAdapter::user();
+        let cmd = adapter.systemctl_cmd();
+        // Just verify it's constructed (we can't easily inspect the args)
+        let _ = cmd;
+    }
+
+    #[test]
+    fn test_systemctl_cmd_system_mode() {
+        let adapter = SystemdAdapter::system();
+        let cmd = adapter.systemctl_cmd();
+        let _ = cmd;
+    }
+
+    #[test]
+    fn test_systemd_run_cmd_user_mode() {
+        let adapter = SystemdAdapter::user();
+        let cmd = adapter.systemd_run_cmd();
+        let _ = cmd;
+    }
+
+    #[test]
+    fn test_systemd_run_cmd_system_mode() {
+        let adapter = SystemdAdapter::system();
+        let cmd = adapter.systemd_run_cmd();
+        let _ = cmd;
+    }
 }

@@ -500,3 +500,111 @@ mod tests {
         assert_eq!(breaker.state(), CircuitState::Open);
     }
 }
+
+// Property-based tests
+#[cfg(test)]
+mod property_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        /// Circuit stays closed until exactly threshold failures
+        #[test]
+        fn opens_exactly_at_threshold(threshold in 1u32..50) {
+            let breaker = CircuitBreaker::new(threshold, Duration::from_secs(60));
+
+            // Record threshold - 1 failures, should stay closed
+            for _ in 0..(threshold - 1) {
+                breaker.record_failure();
+                prop_assert_eq!(breaker.state(), CircuitState::Closed);
+            }
+
+            // The threshold-th failure opens the circuit
+            breaker.record_failure();
+            prop_assert_eq!(breaker.state(), CircuitState::Open);
+        }
+
+        /// Reset always returns to closed state with zero failures
+        #[test]
+        fn reset_always_closes(
+            threshold in 1u32..20,
+            failures in 0u32..30
+        ) {
+            let breaker = CircuitBreaker::new(threshold, Duration::from_secs(60));
+
+            // Record some failures
+            for _ in 0..failures {
+                breaker.record_failure();
+            }
+
+            // Reset should always work
+            breaker.reset();
+            prop_assert_eq!(breaker.state(), CircuitState::Closed);
+            prop_assert_eq!(breaker.failure_count(), 0);
+        }
+
+        /// Success in closed state resets failure count
+        #[test]
+        fn success_resets_failures_in_closed(
+            threshold in 3u32..20,
+            failures in 1u32..3
+        ) {
+            // threshold > failures so we stay closed
+            let breaker = CircuitBreaker::new(threshold, Duration::from_secs(60));
+
+            for _ in 0..failures {
+                breaker.record_failure();
+            }
+            prop_assert!(breaker.failure_count() > 0);
+
+            breaker.record_success();
+            prop_assert_eq!(breaker.failure_count(), 0);
+        }
+
+        /// Open circuit doesn't allow requests
+        #[test]
+        fn open_circuit_blocks(threshold in 1u32..10) {
+            let breaker = CircuitBreaker::new(threshold, Duration::from_secs(60));
+
+            // Open the circuit
+            for _ in 0..threshold {
+                breaker.record_failure();
+            }
+
+            // Should not allow requests
+            prop_assert!(!breaker.allow());
+        }
+
+        /// Closed circuit always allows requests
+        #[test]
+        fn closed_circuit_allows(
+            threshold in 2u32..20,
+            failures in 0u32..2 // Always less than min threshold (2)
+        ) {
+            let breaker = CircuitBreaker::new(threshold, Duration::from_secs(60));
+
+            for _ in 0..failures {
+                breaker.record_failure();
+            }
+
+            // Circuit stays closed, so allow should be true
+            prop_assert_eq!(breaker.state(), CircuitState::Closed);
+            prop_assert!(breaker.allow());
+        }
+
+        /// Failure count is accurately tracked
+        #[test]
+        fn failure_count_accurate(
+            threshold in 10u32..50,
+            failures in 1u32..10 // Keep below threshold
+        ) {
+            let breaker = CircuitBreaker::new(threshold, Duration::from_secs(60));
+
+            for _ in 0..failures {
+                breaker.record_failure();
+            }
+
+            prop_assert_eq!(breaker.failure_count(), failures as u64);
+        }
+    }
+}

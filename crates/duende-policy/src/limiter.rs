@@ -583,4 +583,176 @@ mod tests {
             }
         }
     }
+
+    // Additional test coverage
+    mod additional_tests {
+        use super::*;
+
+        #[test]
+        fn test_resource_limits_clone() {
+            let limits = ResourceLimits::default()
+                .with_memory(1024)
+                .with_cpu(200.0)
+                .with_pids(500);
+
+            let cloned = limits.clone();
+            assert_eq!(cloned.memory_bytes, 1024);
+            assert_eq!(cloned.cpu_quota_percent, 200.0);
+            assert_eq!(cloned.pids_max, 500);
+        }
+
+        #[test]
+        fn test_resource_limits_debug() {
+            let limits = ResourceLimits::default();
+            let debug = format!("{:?}", limits);
+            assert!(debug.contains("memory_bytes"));
+            assert!(debug.contains("cpu_quota_percent"));
+        }
+
+        #[test]
+        fn test_resource_limits_all_builder_methods() {
+            // Test chaining all builder methods
+            let limits = ResourceLimits::default()
+                .with_memory(2048)
+                .with_cpu(300.0)
+                .with_pids(200)
+                .with_io(10000, 20000);
+
+            assert_eq!(limits.memory_bytes, 2048);
+            assert_eq!(limits.cpu_quota_percent, 300.0);
+            assert_eq!(limits.pids_max, 200);
+            assert_eq!(limits.io_read_bps, 10000);
+            assert_eq!(limits.io_write_bps, 20000);
+        }
+
+        #[test]
+        fn test_resource_limits_default_values() {
+            let limits = ResourceLimits::default();
+            // Verify all default values
+            assert_eq!(limits.memory_swap_bytes, 1024 * 1024 * 1024);
+            assert_eq!(limits.cpu_period_us, 100_000);
+            assert_eq!(limits.io_read_bps, 0);
+            assert_eq!(limits.io_write_bps, 0);
+        }
+
+        #[test]
+        fn test_limiter_limits_accessor() {
+            let limits = ResourceLimits::default().with_memory(999);
+            let limiter = ResourceLimiter::new(limits);
+            assert_eq!(limiter.limits().memory_bytes, 999);
+        }
+
+        #[test]
+        fn test_limiter_with_custom_limits() {
+            let limits = ResourceLimits {
+                memory_bytes: 100,
+                memory_swap_bytes: 200,
+                cpu_quota_percent: 50.0,
+                cpu_period_us: 50_000,
+                io_read_bps: 300,
+                io_write_bps: 400,
+                pids_max: 10,
+            };
+            let limiter = ResourceLimiter::new(limits);
+            assert_eq!(limiter.limits().memory_bytes, 100);
+            assert_eq!(limiter.limits().memory_swap_bytes, 200);
+            assert_eq!(limiter.limits().pids_max, 10);
+        }
+
+        #[cfg(not(target_os = "linux"))]
+        #[test]
+        fn test_apply_on_non_linux() {
+            let limiter = ResourceLimiter::default();
+            // On non-Linux, apply should succeed (no-op)
+            let result = limiter.apply(12345);
+            assert!(result.is_ok());
+        }
+
+        #[cfg(not(target_os = "linux"))]
+        #[test]
+        fn test_remove_on_non_linux() {
+            let limiter = ResourceLimiter::default();
+            // On non-Linux, remove should succeed (no-op)
+            let result = limiter.remove(12345);
+            assert!(result.is_ok());
+        }
+    }
+}
+
+// Property-based tests
+#[cfg(test)]
+mod property_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        /// Builder methods preserve other fields
+        #[test]
+        fn builder_preserves_other_fields_with_memory(
+            memory in 0u64..u64::MAX / 2
+        ) {
+            let original = ResourceLimits::default();
+            let modified = original.clone().with_memory(memory);
+
+            prop_assert_eq!(modified.memory_bytes, memory);
+            prop_assert_eq!(modified.cpu_quota_percent, original.cpu_quota_percent);
+            prop_assert_eq!(modified.pids_max, original.pids_max);
+        }
+
+        #[test]
+        fn builder_preserves_other_fields_with_cpu(
+            cpu in 0.0f64..1000.0
+        ) {
+            let original = ResourceLimits::default();
+            let modified = original.clone().with_cpu(cpu);
+
+            prop_assert_eq!(modified.cpu_quota_percent, cpu);
+            prop_assert_eq!(modified.memory_bytes, original.memory_bytes);
+            prop_assert_eq!(modified.pids_max, original.pids_max);
+        }
+
+        #[test]
+        fn builder_preserves_other_fields_with_pids(
+            pids in 0u64..10000
+        ) {
+            let original = ResourceLimits::default();
+            let modified = original.clone().with_pids(pids);
+
+            prop_assert_eq!(modified.pids_max, pids);
+            prop_assert_eq!(modified.memory_bytes, original.memory_bytes);
+            prop_assert_eq!(modified.cpu_quota_percent, original.cpu_quota_percent);
+        }
+
+        /// Clone produces identical values
+        #[test]
+        fn clone_produces_identical_values(
+            memory in 0u64..u64::MAX / 2,
+            pids in 0u64..10000
+        ) {
+            let limits = ResourceLimits::default()
+                .with_memory(memory)
+                .with_pids(pids);
+
+            let cloned = limits.clone();
+            prop_assert_eq!(cloned.memory_bytes, limits.memory_bytes);
+            prop_assert_eq!(cloned.pids_max, limits.pids_max);
+        }
+
+        /// Limiter set_limits changes all values
+        #[test]
+        fn set_limits_changes_all_values(
+            memory in 1u64..1000000,
+            pids in 1u64..1000
+        ) {
+            let mut limiter = ResourceLimiter::default();
+            let new_limits = ResourceLimits::default()
+                .with_memory(memory)
+                .with_pids(pids);
+
+            limiter.set_limits(new_limits);
+
+            prop_assert_eq!(limiter.limits().memory_bytes, memory);
+            prop_assert_eq!(limiter.limits().pids_max, pids);
+        }
+    }
 }

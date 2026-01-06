@@ -460,3 +460,95 @@ mod tests {
         }
     }
 }
+
+// Property-based tests
+#[cfg(test)]
+mod property_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        /// Signal roundtrip: as_i32 -> from_i32 should return the original signal
+        #[test]
+        fn signal_roundtrip(sig in prop::sample::select(vec![
+            Signal::Hup, Signal::Int, Signal::Quit, Signal::Term,
+            Signal::Kill, Signal::Usr1, Signal::Usr2, Signal::Stop, Signal::Cont
+        ])) {
+            let num = sig.as_i32();
+            let restored = Signal::from_i32(num);
+            prop_assert_eq!(restored, Some(sig));
+        }
+
+        /// Invalid signal numbers should return None
+        #[test]
+        fn invalid_signal_returns_none(num in prop::num::i32::ANY.prop_filter(
+            "not a valid signal",
+            |n| ![1, 2, 3, 9, 10, 12, 15, 18, 19].contains(n)
+        )) {
+            prop_assert_eq!(Signal::from_i32(num), None);
+        }
+
+        /// DaemonId uniqueness: new() should always create unique IDs
+        #[test]
+        fn daemon_id_unique(_x in 0u32..1000) {
+            let id1 = DaemonId::new();
+            let id2 = DaemonId::new();
+            prop_assert_ne!(id1, id2);
+        }
+
+        /// DaemonId display format: always produces a 36-char UUID string
+        #[test]
+        fn daemon_id_display_format(_x in 0u32..100) {
+            let id = DaemonId::new();
+            let display = format!("{}", id);
+            prop_assert_eq!(display.len(), 36);
+            prop_assert!(display.contains('-'));
+        }
+
+        /// HealthStatus healthy should always have empty checks
+        #[test]
+        fn healthy_status_has_no_checks(latency in 0u64..10000) {
+            let status = HealthStatus::healthy(latency);
+            prop_assert!(status.is_healthy());
+            prop_assert!(status.checks.is_empty());
+            prop_assert_eq!(status.latency_ms, latency);
+        }
+
+        /// HealthStatus unhealthy should have exactly one check
+        #[test]
+        fn unhealthy_status_has_one_check(
+            reason in "[a-z]{1,20}",
+            latency in 0u64..10000
+        ) {
+            let status = HealthStatus::unhealthy(reason, latency);
+            prop_assert!(!status.is_healthy());
+            prop_assert_eq!(status.checks.len(), 1);
+            prop_assert!(!status.checks[0].passed);
+        }
+
+        /// Terminal states are not active
+        #[test]
+        fn terminal_not_active(reason in prop::sample::select(vec![
+            FailureReason::Signal(9),
+            FailureReason::ExitCode(1),
+            FailureReason::ResourceExhausted,
+            FailureReason::PolicyViolation,
+            FailureReason::HealthCheckTimeout,
+            FailureReason::Internal,
+        ])) {
+            let status = DaemonStatus::Failed(reason);
+            prop_assert!(status.is_terminal());
+            prop_assert!(!status.is_active());
+            prop_assert!(!status.can_signal());
+        }
+
+        /// Serde roundtrip for DaemonId
+        #[test]
+        fn daemon_id_serde_roundtrip(_x in 0u32..100) {
+            let id = DaemonId::new();
+            let json = serde_json::to_string(&id).unwrap();
+            let restored: DaemonId = serde_json::from_str(&json).unwrap();
+            prop_assert_eq!(id, restored);
+        }
+    }
+}

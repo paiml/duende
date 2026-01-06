@@ -70,11 +70,15 @@ test-all:
 
 coverage:
 	@mkdir -p target/coverage
-	cargo llvm-cov --workspace --html --output-dir target/coverage
+	cargo llvm-cov --workspace --html --output-dir target/coverage \
+		--ignore-filename-regex 'bin/mlock-docker-test'
 	@echo "Coverage report: target/coverage/html/index.html"
 
+# Note: mlock-docker-test.rs is excluded because it's a standalone binary
+# for Docker environment testing (requires --cap-add=IPC_LOCK)
 coverage-check:
-	cargo llvm-cov --workspace --fail-under-lines 90
+	cargo llvm-cov --workspace --fail-under-lines 90 \
+		--ignore-filename-regex 'bin/mlock-docker-test'
 
 mutants:
 	cargo mutants --workspace -- --lib

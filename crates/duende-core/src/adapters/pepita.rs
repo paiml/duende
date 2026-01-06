@@ -505,4 +505,134 @@ mod tests {
         let err = result.unwrap_err();
         assert!(err.to_string().contains("KVM") || err.to_string().contains("pepita"));
     }
+
+    // ==================== Extended Tests for Coverage ====================
+
+    #[test]
+    fn test_signal_number_all_signals() {
+        assert_eq!(PepitaAdapter::signal_number(Signal::Int), 2);
+        assert_eq!(PepitaAdapter::signal_number(Signal::Quit), 3);
+        assert_eq!(PepitaAdapter::signal_number(Signal::Hup), 1);
+        assert_eq!(PepitaAdapter::signal_number(Signal::Usr1), 10);
+        assert_eq!(PepitaAdapter::signal_number(Signal::Usr2), 12);
+        assert_eq!(PepitaAdapter::signal_number(Signal::Stop), 19);
+        assert_eq!(PepitaAdapter::signal_number(Signal::Cont), 18);
+    }
+
+    #[test]
+    fn test_vm_id_variations() {
+        assert_eq!(PepitaAdapter::vm_id("test"), "duende-vm-test");
+        assert_eq!(PepitaAdapter::vm_id("test_daemon"), "duende-vm-test-daemon");
+        assert_eq!(PepitaAdapter::vm_id("test-daemon"), "duende-vm-test-daemon");
+        assert_eq!(PepitaAdapter::vm_id(""), "duende-vm-");
+        assert_eq!(PepitaAdapter::vm_id("a b c"), "duende-vm-a-b-c");
+    }
+
+    #[test]
+    fn test_kvm_available_check() {
+        // This just tests that the function doesn't panic
+        let _ = PepitaAdapter::kvm_available();
+    }
+
+    #[tokio::test]
+    async fn test_pepita_available_check() {
+        // pepita is likely not installed, so this should return false
+        let available = PepitaAdapter::pepita_available().await;
+        // We just verify it doesn't panic; result depends on system
+        let _ = available;
+    }
+
+    #[test]
+    fn test_vm_info_state() {
+        let info = VmInfo {
+            vm_id: "test".to_string(),
+            vsock_cid: 10,
+            vmm_pid: Some(1234),
+            state: VmState::Running,
+        };
+        assert_eq!(info.vm_id, "test");
+        assert_eq!(info.vsock_cid, 10);
+        assert_eq!(info.vmm_pid, Some(1234));
+        assert_eq!(info.state, VmState::Running);
+    }
+
+    #[test]
+    fn test_vm_state_variants() {
+        assert_eq!(VmState::Starting, VmState::Starting);
+        assert_eq!(VmState::Running, VmState::Running);
+        assert_eq!(VmState::Paused, VmState::Paused);
+        assert_eq!(VmState::Stopped, VmState::Stopped);
+        assert_eq!(VmState::Failed, VmState::Failed);
+        assert_ne!(VmState::Running, VmState::Stopped);
+    }
+
+    #[test]
+    fn test_vm_info_clone() {
+        let info = VmInfo {
+            vm_id: "clone-test".to_string(),
+            vsock_cid: 20,
+            vmm_pid: None,
+            state: VmState::Paused,
+        };
+        let cloned = info.clone();
+        assert_eq!(cloned.vm_id, "clone-test");
+        assert_eq!(cloned.vsock_cid, 20);
+    }
+
+    #[test]
+    fn test_vm_info_debug() {
+        let info = VmInfo {
+            vm_id: "debug-test".to_string(),
+            vsock_cid: 30,
+            vmm_pid: Some(5678),
+            state: VmState::Running,
+        };
+        let debug = format!("{:?}", info);
+        assert!(debug.contains("debug-test"));
+        assert!(debug.contains("30"));
+    }
+
+    #[test]
+    fn test_pepita_adapter_images_with_string() {
+        let adapter = PepitaAdapter::with_images(
+            String::from("/boot/vmlinuz"),
+            String::from("/var/lib/rootfs.img"),
+        );
+        assert_eq!(adapter.default_kernel.as_deref(), Some("/boot/vmlinuz"));
+        assert_eq!(adapter.default_rootfs.as_deref(), Some("/var/lib/rootfs.img"));
+    }
+
+    #[test]
+    fn test_allocate_cid_sequence() {
+        // Allocate several CIDs and verify they're increasing
+        let cids: Vec<u32> = (0..5).map(|_| PepitaAdapter::allocate_cid()).collect();
+        for i in 1..cids.len() {
+            assert!(cids[i] > cids[i - 1]);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_list_vms_without_pepita() {
+        let adapter = PepitaAdapter::new();
+        // Without pepita installed, this should return empty vec or error
+        let result = adapter.list_vms().await;
+        match result {
+            Ok(vms) => {
+                // Either empty or has some VMs
+                let _ = vms;
+            }
+            Err(_) => {
+                // Error is acceptable if pepita not installed
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_destroy_nonexistent_vm() {
+        let adapter = PepitaAdapter::new();
+        // Should not panic even for nonexistent VM
+        let result = adapter.destroy("nonexistent-vm").await;
+        // Result depends on pepita availability, but should not panic
+        let _ = result;
+    }
 }

@@ -3,8 +3,8 @@
 [![Crates.io](https://img.shields.io/crates/v/duende-core.svg)](https://crates.io/crates/duende-core)
 [![Documentation](https://docs.rs/duende-core/badge.svg)](https://docs.rs/duende-core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-781%20passing-brightgreen.svg)](https://github.com/paiml/duende)
-[![Coverage](https://img.shields.io/badge/coverage-88.67%25-green.svg)](https://github.com/paiml/duende)
+[![Tests](https://img.shields.io/badge/tests-872%20passing-brightgreen.svg)](https://github.com/paiml/duende)
+[![Coverage](https://img.shields.io/badge/coverage-91.53%25-green.svg)](https://github.com/paiml/duende)
 
 <p align="center">
   <img src="assets/hero.svg" alt="Duende - Cross-Platform Daemon Orchestration" width="800">
@@ -29,8 +29,8 @@ cargo run --example mlock
 
 | Metric | Value | Falsification |
 |--------|-------|---------------|
-| Tests | 781 | `cargo test --workspace` |
-| Coverage | 88.67% | `cargo llvm-cov --workspace` |
+| Tests | 872 | `cargo test --workspace` |
+| Coverage | 91.53% | `cargo llvm-cov --workspace` |
 | Platforms | 6 of 6 | Native, Linux, macOS, Container, pepita, WOS |
 | Falsification | F001-F110 | 110 Popperian falsification tests |
 

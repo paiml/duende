@@ -14,8 +14,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Tests | 781 passing |
-| Coverage | 88.67% |
+| Tests | 872 passing |
+| Coverage | 91.53% |
 | Platforms | 6/6 implemented |
 | Falsification Tests | F001-F110 (110 tests) |
 
