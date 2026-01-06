@@ -1,0 +1,35 @@
+[package]
+name = "duende-observe"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Observability integration for Duende (renacer tracing, ttop monitoring)"
+keywords = ["daemon", "tracing", "monitoring", "observability"]
+categories = ["development-tools::profiling"]
+readme = "README.md"
+
+[dependencies]
+duende-core.workspace = true
+
+# P0: PAIML Stack
+renacer.workspace = true
+trueno-viz.workspace = true
+
+# P2: Pure Rust
+thiserror.workspace = true
+serde.workspace = true
+tokio.workspace = true
+async-trait.workspace = true
+tracing.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+proptest.workspace = true
+tokio-test.workspace = true
+
+[lints]
+workspace = true

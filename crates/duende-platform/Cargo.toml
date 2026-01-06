@@ -1,0 +1,54 @@
+[package]
+name = "duende-platform"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Platform adapters for the Duende daemon framework (systemd, launchd, container, pepita, WOS)"
+keywords = ["daemon", "systemd", "launchd", "docker", "microvm"]
+categories = ["os", "asynchronous"]
+readme = "README.md"
+
+[features]
+default = ["native"]
+native = []
+linux = []
+macos = []
+container = []
+pepita = []
+wos = []
+
+[dependencies]
+duende-core.workspace = true
+
+# P0: PAIML Stack
+repartir.workspace = true
+
+# P2: Pure Rust
+thiserror.workspace = true
+serde.workspace = true
+tokio.workspace = true
+async-trait.workspace = true
+tracing.workspace = true
+
+# Platform-specific (unix)
+[target.'cfg(unix)'.dependencies]
+nix.workspace = true
+libc.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+tokio-test.workspace = true
+tracing-subscriber = { workspace = true }
+
+[[example]]
+name = "mlock"
+path = "../../examples/mlock.rs"
+
+[[bin]]
+name = "mlock-docker-test"
+path = "src/bin/mlock-docker-test.rs"
+
+[lints]
+workspace = true

@@ -1,0 +1,156 @@
+# syntax=docker/dockerfile:1
+# Dockerfile for testing mlock behavior in containers
+# Tests DT-007: Swap Deadlock Prevention via memory locking
+#
+# Purified by bashrs dockerfile purify
+#
+# Usage:
+#   docker build -f docker/Dockerfile.mlock-test -t duende-mlock-test .
+#
+#   # Test WITHOUT CAP_IPC_LOCK (should fail gracefully)
+#   docker run --rm duende-mlock-test
+#
+#   # Test WITH CAP_IPC_LOCK (should succeed)
+#   docker run --rm --cap-add=IPC_LOCK duende-mlock-test
+#
+#   # Test with unlimited memlock
+#   docker run --rm --cap-add=IPC_LOCK --ulimit memlock=-1:-1 duende-mlock-test
+
+# Pin base images with SHA256 for reproducibility (bashrs DOCKER002)
+FROM rust:1.83-slim-bookworm@sha256:540c902e99c384163b688bbd8b5b8520e94e7731b27f7bd0eaa56ae1960627ab AS builder
+
+WORKDIR /app
+
+# Create standalone mlock test binary (no external dependencies)
+# This is embedded Rust code - not a shell script (bashrs compliant)
+RUN cat > /app/mlock_test.rs << 'RUSTEOF'
+//! Minimal mlock test binary for Docker testing
+//! Tests DT-007: Swap Deadlock Prevention
+use std::process::ExitCode;
+
+fn main() -> ExitCode {
+    println!("=== duende mlock Docker Test ===");
+    println!("DT-007: Swap Deadlock Prevention\n");
+
+    // Check capabilities
+    println!("Container Environment:");
+    if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
+        for line in status.lines() {
+            if line.starts_with("Cap") {
+                println!("  {}", line);
+            }
+        }
+    }
+    println!();
+
+    // Check memlock limits
+    println!("Memory Lock Limits:");
+    if let Ok(limits) = std::fs::read_to_string("/proc/self/limits") {
+        for line in limits.lines() {
+            if line.contains("locked") {
+                println!("  {}", line);
+            }
+        }
+    }
+    println!();
+
+    // Test 1: mlock with MCL_CURRENT | MCL_FUTURE
+    println!("Test 1: mlockall(MCL_CURRENT | MCL_FUTURE)");
+
+    // libc constants for mlock
+    const MCL_CURRENT: i32 = 1;
+    const MCL_FUTURE: i32 = 2;
+    const EPERM: i32 = 1;
+    const ENOMEM: i32 = 12;
+
+    extern "C" {
+        fn mlockall(flags: i32) -> i32;
+        fn munlockall() -> i32;
+    }
+
+    let result = unsafe { mlockall(MCL_CURRENT | MCL_FUTURE) };
+
+    if result == 0 {
+        println!("  Result: SUCCESS - Memory locked");
+
+        // Verify via /proc/self/status
+        if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
+            for line in status.lines() {
+                if line.starts_with("VmLck:") {
+                    println!("  {}", line);
+                }
+            }
+        }
+
+        // Unlock for cleanup
+        unsafe { munlockall() };
+        println!("  Cleanup: munlockall() called");
+    } else {
+        let errno = std::io::Error::last_os_error().raw_os_error().unwrap_or(-1);
+        let msg = match errno {
+            e if e == ENOMEM => "ENOMEM - insufficient memory or resource limits",
+            e if e == EPERM => "EPERM - insufficient privileges (need CAP_IPC_LOCK)",
+            22 => "EINVAL - invalid flags",
+            _ => "unknown error",
+        };
+        println!("  Result: FAILED - {} (errno={})", msg, errno);
+        println!("  This is EXPECTED in containers without CAP_IPC_LOCK");
+    }
+    println!();
+
+    // Test 2: Verify VmLck field exists
+    println!("Test 2: VmLck field in /proc/self/status");
+    if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
+        let has_vmlck = status.lines().any(|l| l.starts_with("VmLck:"));
+        if has_vmlck {
+            println!("  Result: PASS - VmLck field present");
+        } else {
+            println!("  Result: FAIL - VmLck field missing");
+        }
+    }
+    println!();
+
+    // Test 3: Check capability bit for IPC_LOCK
+    println!("Test 3: CAP_IPC_LOCK capability check");
+    if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
+        for line in status.lines() {
+            if line.starts_with("CapEff:") {
+                // CAP_IPC_LOCK is bit 14 (1 << 14 = 0x4000)
+                if let Some(hex) = line.split_whitespace().nth(1) {
+                    if let Ok(caps) = u64::from_str_radix(hex, 16) {
+                        let has_ipc_lock = (caps & (1 << 14)) != 0;
+                        println!("  CapEff: 0x{:016x}", caps);
+                        println!("  CAP_IPC_LOCK (bit 14): {}", if has_ipc_lock { "SET" } else { "NOT SET" });
+                    }
+                }
+            }
+        }
+    }
+    println!();
+
+    // Summary
+    println!("=== Summary ===");
+    println!("To enable mlock in Docker, use:");
+    println!("  docker run --cap-add=IPC_LOCK ...");
+    println!("  docker run --cap-add=IPC_LOCK --ulimit memlock=-1:-1 ...");
+    println!("  docker run --privileged ...");
+    println!();
+    println!("For trueno-ublk swap devices, mlock is CRITICAL to prevent deadlock.");
+
+    ExitCode::SUCCESS
+}
+RUSTEOF
+
+# Compile the standalone test binary
+RUN rustc /app/mlock_test.rs -o /app/mlock_test --edition 2021 -C opt-level=2
+
+# Runtime image - minimal (pinned with SHA256)
+FROM debian:bookworm-slim@sha256:d5d3f9c23164ea16f31852f95bd5959aad1c5e854332fe00f7b3a20fcc9f635c
+
+COPY --from=builder /app/mlock_test /usr/local/bin/mlock_test
+
+# NOTE: Running as root is intentional for mlock testing
+# mlock requires CAP_IPC_LOCK which is typically only available to root
+# or processes with explicit capability grants
+
+CMD ["/usr/local/bin/mlock_test"]

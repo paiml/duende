@@ -1,0 +1,33 @@
+[package]
+name = "duende-policy"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Policy enforcement for Duende (quality gates, circuit breakers, resource limits)"
+keywords = ["daemon", "policy", "circuit-breaker", "quality"]
+categories = ["development-tools"]
+readme = "README.md"
+
+[dependencies]
+duende-core.workspace = true
+
+# P0: PAIML Stack
+repartir.workspace = true
+
+# P2: Pure Rust
+thiserror.workspace = true
+serde.workspace = true
+tokio.workspace = true
+async-trait.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+tokio-test.workspace = true
+serde_json.workspace = true
+tempfile = "3.10"
+
+[lints]
+workspace = true

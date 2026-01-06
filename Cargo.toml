@@ -1,0 +1,151 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/duende-core",
+    "crates/duende-mlock",
+    "crates/duende-platform",
+    "crates/duende-observe",
+    "crates/duende-policy",
+    "crates/duende-test",
+]
+
+[package]
+name = "duende"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Cross-platform daemon tooling framework"
+readme = "README.md"
+keywords = ["daemon", "systemd", "launchd", "microvm", "observability"]
+categories = ["os", "development-tools", "asynchronous"]
+
+[dependencies]
+duende-core.workspace = true
+duende-mlock.workspace = true
+duende-platform.workspace = true
+tokio.workspace = true
+async-trait.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[[example]]
+name = "daemon"
+path = "examples/daemon.rs"
+
+[[example]]
+name = "mlock"
+path = "examples/mlock.rs"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["PAIML <team@paiml.com>"]
+license = "MIT"
+repository = "https://github.com/paiml/duende"
+homepage = "https://paiml.com/duende"
+description = "Cross-platform daemon tooling framework for the PAIML Sovereign AI Stack"
+keywords = ["daemon", "systemd", "launchd", "microvm", "observability"]
+categories = ["os", "development-tools", "asynchronous"]
+rust-version = "1.83"
+
+[workspace.dependencies]
+# ═══════════════════════════════════════════════════════════════════════════════
+# P0: PAIML Sovereign AI Stack (REQUIRED) - Iron Lotus Framework
+# ═══════════════════════════════════════════════════════════════════════════════
+trueno = "0.11"
+trueno-viz = "0.1"
+trueno-zram = "0.1"
+repartir = "1.1"
+renacer = "0.9"
+aprender = "0.21"
+pacha = "0.2"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# P2: Vetted Pure Rust Crates (MINIMAL SET)
+# ═══════════════════════════════════════════════════════════════════════════════
+thiserror = "2.0"
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "signal", "fs", "process", "io-util"] }
+async-trait = "0.1"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Internal workspace crates
+# ═══════════════════════════════════════════════════════════════════════════════
+duende-core = { version = "0.1", path = "crates/duende-core" }
+duende-mlock = { version = "1.0", path = "crates/duende-mlock" }
+duende-platform = { version = "0.1", path = "crates/duende-platform" }
+duende-observe = { version = "0.1", path = "crates/duende-observe" }
+duende-policy = { version = "0.1", path = "crates/duende-policy" }
+duende-test = { version = "0.1", path = "crates/duende-test" }
+
+# Utilities
+humantime = "2.1"
+
+# Platform-specific
+nix = { version = "0.29", features = ["process", "signal"] }
+libc = "0.2"
+parking_lot = "0.12"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Testing
+# ═══════════════════════════════════════════════════════════════════════════════
+proptest = "1.4"
+tokio-test = "0.4"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Iron Lotus Lint Configuration
+# ═══════════════════════════════════════════════════════════════════════════════
+[workspace.lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
+
+[workspace.lints.clippy]
+# Set lint groups to lower priority so specific lints can override
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+
+# Iron Lotus: No unwrap/panic/todo in production code
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+
+# Force explicit error handling
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+
+# Allow common patterns
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+
+# Allow casts that are intentional (we're aware of the truncation)
+cast_possible_truncation = "allow"
+cast_precision_loss = "allow"
+cast_sign_loss = "allow"
+
+# Transitive dependencies - we can't control these
+multiple_crate_versions = "allow"
+
+# Allow non-const functions (overly pedantic)
+missing_const_for_fn = "allow"
+
+# Metadata - we'll add READMEs later
+cargo_common_metadata = "allow"
+
+# Allow trait implementations with literal returns
+unnecessary_literal_bound = "allow"
+
+# Allow uninlined format args in tests (more readable)
+uninlined_format_args = "allow"
+
+# Doc comments - allow common identifiers without backticks
+doc_markdown = "allow"

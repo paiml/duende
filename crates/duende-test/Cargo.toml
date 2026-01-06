@@ -1,0 +1,38 @@
+[package]
+name = "duende-test"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Testing infrastructure for Duende (harness, chaos injection, load testing)"
+keywords = ["daemon", "testing", "chaos", "load-testing"]
+categories = ["development-tools::testing"]
+readme = "README.md"
+
+[features]
+default = []
+falsification = []
+
+[dependencies]
+duende-core.workspace = true
+duende-platform.workspace = true
+
+# P0: PAIML Stack
+repartir.workspace = true
+
+# P2: Pure Rust
+thiserror.workspace = true
+serde.workspace = true
+tokio.workspace = true
+async-trait.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+tokio-test.workspace = true
+duende-observe.workspace = true
+duende-policy.workspace = true
+
+[lints]
+workspace = true

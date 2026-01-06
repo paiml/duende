@@ -1,0 +1,431 @@
+roadmap_version: '1.0'
+github_enabled: false
+github_repo: paiml/duende
+roadmap:
+- id: DP-001
+  github_issue: null
+  item_type: feature
+  title: 'Add mlock() Memory Locking Capability'
+  status: completed
+  priority: critical
+  assigned_to: null
+  created: 2026-01-06T12:00:00Z
+  updated: 2026-01-06T18:00:00Z
+  spec: null
+  acceptance_criteria:
+  - Add `lock_memory: bool` field to ResourceConfig
+  - Linux adapter calls mlockall(MCL_CURRENT | MCL_FUTURE) when enabled
+  - Daemon memory pinned before init() is called
+  - Handle EPERM gracefully (warn, don't panic unless required)
+  - Add TRUENO_MLOCK / TRUENO_MLOCK_REQUIRED env var support
+  - Tests verify mlock via /proc/self/status VmLck field
+  phases: []
+  subtasks:
+  - id: DP-001a
+    github_issue: null
+    title: Add lock_memory to ResourceConfig
+    status: completed
+    completion: 100
+    notes: 'Implemented in duende-core/src/config.rs (lock_memory, lock_memory_required fields)'
+  - id: DP-001b
+    github_issue: null
+    title: Implement mlockall() in Linux adapter
+    status: completed
+    completion: 100
+    notes: 'Implemented as standalone duende-mlock crate v1.0.0'
+  - id: DP-001c
+    github_issue: null
+    title: Add is_memory_locked() diagnostic function
+    status: completed
+    completion: 100
+    notes: 'duende-mlock::is_locked() and duende-mlock::locked_bytes()'
+  - id: DP-001d
+    github_issue: null
+    title: Unit tests for mlock functionality
+    status: completed
+    completion: 100
+    notes: '27 unit tests + 11 doc tests, Docker test suite (5 configs)'
+  estimated_effort: 3h
+  labels:
+  - feature
+  - critical
+  - memory
+  - swap-daemon
+  notes: |
+    COMPLETED: duende-mlock v1.0.0 crate
+
+    ## Crate: duende-mlock v1.0.0
+
+    Standalone, minimal-dependency mlock crate for swap-critical daemons.
+
+    ### API
+
+    ```rust
+    use duende_mlock::{lock_all, MlockConfig, lock_with_config};
+
+    // Simple: lock all memory
+    let status = lock_all()?;
+
+    // Configurable: custom options
+    let config = MlockConfig::builder()
+        .current(true)      // MCL_CURRENT
+        .future(true)       // MCL_FUTURE
+        .required(false)    // Non-fatal on failure
+        .onfault(false)     // MCL_ONFAULT (Linux 4.4+)
+        .build();
+    let status = lock_with_config(config)?;
+    ```
+
+    ### Features
+
+    - Minimal deps: just `libc` (no tokio, no async)
+    - Cross-platform: Linux (full), macOS (limited), others (graceful fallback)
+    - Rich errors: MlockError with remediation guidance
+    - Status tracking: MlockStatus::Locked { bytes_locked }, Failed, Unsupported
+
+    ### Docker Testing
+
+    ```bash
+    cargo run -p duende-platform --bin mlock-docker-test
+    # Tests: default, CAP_IPC_LOCK, unlimited memlock, privileged, seccomp=unconfined
+    ```
+
+    ### Integration
+
+    trueno-ublk/trueno-zram can now add:
+    ```toml
+    duende-mlock = "1.0"
+    ```
+
+    REFERENCE:
+    - trueno-zram DT-007: Fix Swap Deadlock via duende Integration
+    - Linux kernel mm/swap_state.c (zram uses GFP_NOIO)
+- id: DP-002
+  github_issue: null
+  item_type: feature
+  title: 'Complete Linux systemd Adapter'
+  status: planned
+  priority: high
+  assigned_to: null
+  created: 2026-01-06T12:00:00Z
+  updated: 2026-01-06T12:00:00Z
+  spec: null
+  acceptance_criteria:
+  - spawn() creates systemd unit file and starts service
+  - signal() forwards signals via systemctl
+  - status() parses systemctl status output
+  - Unit file includes resource limits from ResourceConfig
+  - Graceful shutdown via systemctl stop
+  phases: []
+  subtasks: []
+  estimated_effort: 8h
+  labels:
+  - feature
+  - linux
+  - systemd
+  notes: |
+    Currently Linux adapter returns NotImplemented for all operations.
+    Need full systemd integration for production daemon management.
+
+    UNIT FILE TEMPLATE:
+    ```ini
+    [Unit]
+    Description={{description}}
+    After=network.target
+
+    [Service]
+    Type=simple
+    ExecStart={{binary_path}} {{args}}
+    Restart={{restart_policy}}
+    MemoryLimit={{memory_bytes}}
+    CPUQuota={{cpu_quota}}%
+
+    [Install]
+    WantedBy=multi-user.target
+    ```
+- id: DP-003
+  github_issue: null
+  item_type: integration
+  title: 'trueno-ublk Integration'
+  status: in_progress
+  priority: high
+  assigned_to: null
+  created: 2026-01-06T12:00:00Z
+  updated: 2026-01-06T18:30:00Z
+  spec: null
+  acceptance_criteria:
+  - trueno-ublk adds duende-mlock = "1.0" dependency
+  - Call duende_mlock::lock_all() at daemon startup
+  - Device creation after mlock() succeeds
+  - I/O loop in run()
+  - Cleanup in shutdown()
+  - Health check returns device stats
+  - Passes 10-minute swap stress test
+  phases: []
+  subtasks:
+  - id: DP-003a
+    github_issue: null
+    title: Add duende-mlock dependency
+    status: completed
+    completion: 100
+    notes: 'COMPLETED: Added to trueno-ublk Cargo.toml as path dependency'
+  - id: DP-003b
+    github_issue: null
+    title: Call lock_all() at daemon startup
+    status: completed
+    completion: 100
+    notes: 'COMPLETED: device.rs:create() calls lock_all() before any init. 2 integration tests pass (136MB locked)'
+  - id: DP-003c
+    github_issue: null
+    title: Pre-allocate compression buffers
+    status: planned
+    completion: 0
+    notes: 'Prevent runtime allocation during swap I/O'
+  - id: DP-003d
+    github_issue: null
+    title: Verify with swap stress test
+    status: planned
+    completion: 0
+    notes: 'Test script: trueno-zram/scripts/test-swap-deadlock.sh. Requires privileged mode.'
+  estimated_effort: 4h
+  labels:
+  - integration
+  - trueno-ublk
+  - swap
+  notes: |
+    READY FOR INTEGRATION (DP-001 complete)
+
+    trueno-ublk can now integrate duende-mlock:
+
+    ```rust
+    // In device.rs create()
+    use duende_mlock::{lock_all, MlockConfig, lock_with_config};
+
+    // Option 1: Simple (fails if mlock fails)
+    let status = lock_all()?;
+
+    // Option 2: Non-fatal (warn but continue)
+    let config = MlockConfig::builder()
+        .required(false)
+        .build();
+    let status = lock_with_config(config)?;
+    match status {
+        MlockStatus::Locked { .. } => info!("Memory locked"),
+        MlockStatus::Failed { errno } => warn!("mlock failed: {}", errno),
+        MlockStatus::Unsupported => debug!("mlock not supported"),
+    }
+    ```
+
+    Container requirements documented in duende-mlock README.
+
+    Reference: ../trueno-zram/docs/roadmaps/roadmap.yaml (DT-007, DT-008)
+- id: DP-004
+  github_issue: null
+  item_type: feature
+  title: 'Complete macOS launchd Adapter'
+  status: planned
+  priority: medium
+  assigned_to: null
+  created: 2026-01-06T12:00:00Z
+  updated: 2026-01-06T12:00:00Z
+  spec: null
+  acceptance_criteria:
+  - spawn() generates plist and loads via launchctl
+  - signal() forwards signals via launchctl
+  - status() parses launchctl list output
+  - Graceful shutdown via launchctl unload
+  phases: []
+  subtasks:
+  - id: DP-004a
+    github_issue: null
+    title: Implement plist generation
+    status: planned
+    completion: 0
+  - id: DP-004b
+    github_issue: null
+    title: Implement launchctl load/unload
+    status: planned
+    completion: 0
+  - id: DP-004c
+    github_issue: null
+    title: Implement launchctl signal forwarding
+    status: planned
+    completion: 0
+  - id: DP-004d
+    github_issue: null
+    title: Implement launchctl list parsing
+    status: planned
+    completion: 0
+  estimated_effort: 8h
+  labels:
+  - feature
+  - macos
+  - launchd
+  notes: |
+    macOS adapter structure exists (duende-platform/src/macos.rs)
+    but all operations return NotImplemented.
+
+    TODOs in code:
+    - plist generation and launchctl load
+    - launchctl signal forwarding
+    - launchctl list parsing
+    - renacer tracer attachment
+- id: DP-005
+  github_issue: null
+  item_type: feature
+  title: 'Complete Container (Docker/OCI) Adapter'
+  status: planned
+  priority: medium
+  assigned_to: null
+  created: 2026-01-06T12:00:00Z
+  updated: 2026-01-06T12:00:00Z
+  spec: null
+  acceptance_criteria:
+  - spawn() creates container via runtime API
+  - signal() forwards signals via docker/podman kill
+  - status() parses docker/podman inspect
+  - Support for docker, podman, and containerd runtimes
+  phases: []
+  subtasks:
+  - id: DP-005a
+    github_issue: null
+    title: Implement container creation via runtime API
+    status: planned
+    completion: 0
+  - id: DP-005b
+    github_issue: null
+    title: Implement docker kill with signal
+    status: planned
+    completion: 0
+  - id: DP-005c
+    github_issue: null
+    title: Implement docker inspect
+    status: planned
+    completion: 0
+  - id: DP-005d
+    github_issue: null
+    title: Implement container tracer attachment
+    status: planned
+    completion: 0
+  estimated_effort: 8h
+  labels:
+  - feature
+  - container
+  - docker
+  - oci
+  notes: |
+    Container adapter structure exists (duende-platform/src/container.rs)
+    with ContainerRuntime enum (Docker, Podman, Containerd)
+    but all operations return NotImplemented.
+
+    TODOs in code:
+    - Container creation via runtime API
+    - docker kill with signal
+    - docker inspect
+    - container tracer attachment
+- id: DP-006
+  github_issue: null
+  item_type: feature
+  title: 'Complete pepita MicroVM Adapter'
+  status: planned
+  priority: low
+  assigned_to: null
+  created: 2026-01-06T12:00:00Z
+  updated: 2026-01-06T12:00:00Z
+  spec: null
+  acceptance_criteria:
+  - spawn() creates VM with configured vCPUs/memory
+  - signal() forwards via vsock
+  - status() queries VM state
+  - Virtio-blk file passing works
+  phases: []
+  subtasks:
+  - id: DP-006a
+    github_issue: null
+    title: Implement pepita VM creation
+    status: planned
+    completion: 0
+  - id: DP-006b
+    github_issue: null
+    title: Implement vsock signal forwarding
+    status: planned
+    completion: 0
+  - id: DP-006c
+    github_issue: null
+    title: Implement VM status query
+    status: planned
+    completion: 0
+  - id: DP-006d
+    github_issue: null
+    title: Implement VM tracer attachment via vsock
+    status: planned
+    completion: 0
+  estimated_effort: 12h
+  labels:
+  - feature
+  - pepita
+  - microvm
+  notes: |
+    pepita adapter structure exists (duende-platform/src/pepita.rs)
+    but all operations return NotImplemented.
+
+    Depends on pepita crate availability in PAIML stack.
+
+    TODOs in code:
+    - pepita VM creation
+    - vsock signal forwarding
+    - VM status query
+    - VM tracer attachment via vsock
+- id: DP-007
+  github_issue: null
+  item_type: feature
+  title: 'Complete WOS (WebAssembly OS) Adapter'
+  status: planned
+  priority: low
+  assigned_to: null
+  created: 2026-01-06T12:00:00Z
+  updated: 2026-01-06T12:00:00Z
+  spec: null
+  acceptance_criteria:
+  - spawn() creates WOS process
+  - signal() delivers signal to process
+  - status() returns process state
+  - 8-level priority scheduling works
+  phases: []
+  subtasks:
+  - id: DP-007a
+    github_issue: null
+    title: Implement WOS process creation
+    status: planned
+    completion: 0
+  - id: DP-007b
+    github_issue: null
+    title: Implement WOS signal delivery
+    status: planned
+    completion: 0
+  - id: DP-007c
+    github_issue: null
+    title: Implement WOS process status
+    status: planned
+    completion: 0
+  - id: DP-007d
+    github_issue: null
+    title: Implement WOS tracer attachment
+    status: planned
+    completion: 0
+  estimated_effort: 12h
+  labels:
+  - feature
+  - wos
+  - wasm
+  notes: |
+    WOS adapter structure exists (duende-platform/src/wos.rs)
+    but all operations return NotImplemented.
+
+    WOS is the WebAssembly Operating System from PAIML stack.
+
+    TODOs in code:
+    - WOS process creation
+    - WOS signal delivery
+    - WOS process status
+    - WOS tracer attachment

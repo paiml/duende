@@ -1,0 +1,39 @@
+[package]
+name = "duende-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Core daemon lifecycle primitives for the Duende framework"
+keywords = ["daemon", "lifecycle", "async", "metrics"]
+categories = ["os", "asynchronous"]
+readme = "README.md"
+
+[dependencies]
+# P0: PAIML Stack
+repartir.workspace = true
+pacha.workspace = true
+
+# P2: Pure Rust
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+tokio.workspace = true
+async-trait.workspace = true
+uuid.workspace = true
+tracing.workspace = true
+humantime.workspace = true
+
+# Platform-specific
+[target.'cfg(unix)'.dependencies]
+nix.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+tokio-test.workspace = true
+parking_lot.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,58 @@
+# Mutation Testing Configuration (Iron Lotus Tier 3)
+# Target: ≥80% mutation score per Certeza framework
+#
+# Usage:
+#   make mutants-fast    # Quick sample (~5 min)
+#   make mutants         # Full suite (~30-60 min)
+
+# General settings
+timeout_multiplier = 2.0
+build_timeout_multiplier = 3.0
+jobs = 4
+
+# Skip test-only crates (they test implementation, not themselves)
+exclude_globs = [
+    "crates/duende-test/**",
+    "tests/**",
+]
+
+# Regex patterns for functions to skip
+exclude_re = [
+    # Skip Display/Debug impls (formatting is aesthetic)
+    "impl.*fmt::Display",
+    "impl.*fmt::Debug",
+    # Skip error constructors (simple forwarding)
+    "^new_",
+    # Skip builder pattern methods (mostly setters)
+    "^with_",
+    "^set_",
+    # Skip test helpers
+    "^test_",
+    "_for_test$",
+]
+
+# Error types that indicate real bugs when mutated
+error_values = [
+    "Err\\(",
+    "None",
+    "return Err",
+]
+
+# These mutations should definitely be caught
+examine_re = [
+    # Core daemon lifecycle
+    "init",
+    "run",
+    "shutdown",
+    "health_check",
+    # Policy enforcement
+    "enforce",
+    "check",
+    "validate",
+    # Circuit breaker
+    "allow",
+    "record_",
+    # Resource limits
+    "apply",
+    "limit",
+]
