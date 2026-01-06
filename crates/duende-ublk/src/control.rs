@@ -141,8 +141,18 @@ impl UblkControl {
         Ok(info)
     }
 
-    /// Send a simple command (no data buffer) to a device
+    /// Send a simple command (no data buffer) to a device with timeout
     fn send_command(&mut self, dev_id: u32, opcode_val: u32) -> Result<bool, Error> {
+        self.send_command_timeout(dev_id, opcode_val, std::time::Duration::from_secs(5))
+    }
+
+    /// Send a simple command with explicit timeout
+    fn send_command_timeout(
+        &mut self,
+        dev_id: u32,
+        opcode_val: u32,
+        timeout: std::time::Duration,
+    ) -> Result<bool, Error> {
         let cmd = UblkCtrlCmdExt::for_device(dev_id);
         let fd = self.file.as_raw_fd();
 
@@ -159,24 +169,39 @@ impl UblkControl {
                 .map_err(|_| Error::IoUringSubmit(std::io::Error::from_raw_os_error(libc::ENOSPC)))?;
         }
 
-        self.ring.submit_and_wait(1).map_err(Error::IoUringSubmit)?;
+        // Submit without blocking
+        self.ring.submit().map_err(Error::IoUringSubmit)?;
 
-        if let Some(cqe) = self.ring.completion().next() {
-            let res = cqe.result();
-            if res < 0 {
-                // ENOENT means device doesn't exist - not an error for delete
-                if res == -libc::ENOENT {
-                    return Ok(false);
+        // Poll with timeout
+        let start = std::time::Instant::now();
+        loop {
+            // Check for completion
+            if let Some(cqe) = self.ring.completion().next() {
+                let res = cqe.result();
+                if res < 0 {
+                    // ENOENT means device doesn't exist - not an error for delete
+                    if res == -libc::ENOENT {
+                        return Ok(false);
+                    }
+                    // EBUSY means device is in use
+                    if res == -libc::EBUSY {
+                        return Err(Error::DeviceBusy { dev_id });
+                    }
+                    return Err(Error::from_errno(res));
                 }
-                // EBUSY means device is in use
-                if res == -libc::EBUSY {
-                    return Err(Error::DeviceBusy { dev_id });
-                }
-                return Err(Error::from_errno(res));
+                return Ok(true);
             }
-        }
 
-        Ok(true)
+            // Check timeout
+            if start.elapsed() > timeout {
+                return Err(Error::Timeout {
+                    timeout_ms: timeout.as_millis() as u64,
+                });
+            }
+
+            // Brief sleep to avoid busy-spinning
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
     }
 
     /// Force delete a device (stop first, then delete)
