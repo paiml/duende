@@ -1,5 +1,7 @@
 # Duende: Cross-Platform Daemon Framework
 
+![Duende - Cross-Platform Daemon Orchestration](images/hero.svg)
+
 **Duende** is a cross-platform daemon tooling framework for the PAIML Sovereign AI Stack. It provides a unified abstraction for daemon lifecycle management across:
 
 - **Linux** (systemd)
