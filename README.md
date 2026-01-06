@@ -1,5 +1,13 @@
 # duende
 
+[![Crates.io](https://img.shields.io/crates/v/duende-core.svg)](https://crates.io/crates/duende-core)
+[![Documentation](https://docs.rs/duende-core/badge.svg)](https://docs.rs/duende-core)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+<p align="center">
+  <img src="assets/hero.svg" alt="Duende - Cross-Platform Daemon Orchestration" width="800">
+</p>
+
 Cross-platform daemon tooling framework for the **PAIML Sovereign AI Stack**.
 
 ## Overview
