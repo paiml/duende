@@ -481,9 +481,10 @@ pub trait PlatformAdapter: Send + Sync {
         let start = std::time::Instant::now();
         while start.elapsed() < timeout {
             if let Ok(status) = self.status(handle).await
-                && status.is_terminal() {
-                    return Ok(());
-                }
+                && status.is_terminal()
+            {
+                return Ok(());
+            }
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
 

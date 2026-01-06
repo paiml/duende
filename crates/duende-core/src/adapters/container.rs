@@ -221,8 +221,10 @@ impl PlatformAdapter for ContainerAdapter {
             ContainerRuntime::Docker | ContainerRuntime::Podman => {
                 cmd.arg("run")
                     .arg("-d") // detached
-                    .arg("--name").arg(&container_name)
-                    .arg("--restart").arg("on-failure:5")
+                    .arg("--name")
+                    .arg(&container_name)
+                    .arg("--restart")
+                    .arg("on-failure:5")
                     .arg(&self.default_image)
                     .arg("/bin/sh")
                     .arg("-c")
@@ -285,14 +287,16 @@ impl PlatformAdapter for ContainerAdapter {
         match self.runtime {
             ContainerRuntime::Docker | ContainerRuntime::Podman => {
                 cmd.arg("kill")
-                    .arg("--signal").arg(Self::signal_name(sig))
+                    .arg("--signal")
+                    .arg(Self::signal_name(sig))
                     .arg(container_id);
             }
             ContainerRuntime::Containerd => {
                 // ctr uses task kill
                 cmd.arg("task")
                     .arg("kill")
-                    .arg("--signal").arg(Self::signal_name(sig))
+                    .arg("--signal")
+                    .arg(Self::signal_name(sig))
                     .arg(container_id);
             }
         }
@@ -327,13 +331,12 @@ impl PlatformAdapter for ContainerAdapter {
         match self.runtime {
             ContainerRuntime::Docker | ContainerRuntime::Podman => {
                 cmd.arg("inspect")
-                    .arg("--format").arg("{{json .State}}")
+                    .arg("--format")
+                    .arg("{{json .State}}")
                     .arg(container_id);
             }
             ContainerRuntime::Containerd => {
-                cmd.arg("task")
-                    .arg("list")
-                    .arg(container_id);
+                cmd.arg("task").arg("list").arg(container_id);
             }
         }
 
@@ -365,7 +368,8 @@ impl PlatformAdapter for ContainerAdapter {
         match self.runtime {
             ContainerRuntime::Docker | ContainerRuntime::Podman => {
                 cmd.arg("inspect")
-                    .arg("--format").arg("{{.State.Pid}}")
+                    .arg("--format")
+                    .arg("{{.State.Pid}}")
                     .arg(container_id);
             }
             ContainerRuntime::Containerd => {
@@ -490,9 +494,18 @@ mod tests {
 
     #[test]
     fn test_container_name_generation() {
-        assert_eq!(ContainerAdapter::container_name("my-daemon"), "duende-my-daemon");
-        assert_eq!(ContainerAdapter::container_name("my daemon"), "duende-my-daemon");
-        assert_eq!(ContainerAdapter::container_name("my_daemon"), "duende-my-daemon");
+        assert_eq!(
+            ContainerAdapter::container_name("my-daemon"),
+            "duende-my-daemon"
+        );
+        assert_eq!(
+            ContainerAdapter::container_name("my daemon"),
+            "duende-my-daemon"
+        );
+        assert_eq!(
+            ContainerAdapter::container_name("my_daemon"),
+            "duende-my-daemon"
+        );
     }
 
     #[test]
@@ -504,7 +517,10 @@ mod tests {
     #[test]
     fn test_parse_status_running() {
         let output = r#"{"Running": true, "Paused": false}"#;
-        assert_eq!(ContainerAdapter::parse_status(output), DaemonStatus::Running);
+        assert_eq!(
+            ContainerAdapter::parse_status(output),
+            DaemonStatus::Running
+        );
     }
 
     #[test]
@@ -516,7 +532,10 @@ mod tests {
     #[test]
     fn test_parse_status_stopped() {
         let output = r#"{"Running": false, "Paused": false, "ExitCode": 0}"#;
-        assert_eq!(ContainerAdapter::parse_status(output), DaemonStatus::Stopped);
+        assert_eq!(
+            ContainerAdapter::parse_status(output),
+            DaemonStatus::Stopped
+        );
     }
 
     #[test]
@@ -530,9 +549,18 @@ mod tests {
 
     #[test]
     fn test_extract_exit_code() {
-        assert_eq!(ContainerAdapter::extract_exit_code(r#""ExitCode": 0"#), Some(0));
-        assert_eq!(ContainerAdapter::extract_exit_code(r#""ExitCode": 1"#), Some(1));
-        assert_eq!(ContainerAdapter::extract_exit_code(r#""ExitCode":137"#), Some(137));
+        assert_eq!(
+            ContainerAdapter::extract_exit_code(r#""ExitCode": 0"#),
+            Some(0)
+        );
+        assert_eq!(
+            ContainerAdapter::extract_exit_code(r#""ExitCode": 1"#),
+            Some(1)
+        );
+        assert_eq!(
+            ContainerAdapter::extract_exit_code(r#""ExitCode":137"#),
+            Some(137)
+        );
         assert_eq!(ContainerAdapter::extract_exit_code("no exit code"), None);
     }
 

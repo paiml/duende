@@ -108,7 +108,10 @@ fn f048_negative_cpu_quota_rejected() {
         ..Default::default()
     };
     let result = config.validate();
-    assert!(result.is_err(), "Negative cpu_quota_percent should be rejected");
+    assert!(
+        result.is_err(),
+        "Negative cpu_quota_percent should be rejected"
+    );
 }
 
 /// F049: Zero pids_max rejected

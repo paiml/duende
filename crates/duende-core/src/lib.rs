@@ -1,3 +1,6 @@
+// Iron Lotus: Allow unwrap/expect in tests for clear failure messages
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
+
 //! # duende-core
 //!
 //! Core daemon lifecycle primitives for the Duende cross-platform daemon framework.
@@ -57,13 +60,13 @@ pub use adapter::{
     TracerType,
 };
 pub use adapters::{
-    select_adapter, select_adapter_auto, ContainerAdapter, ContainerRuntime, LaunchdAdapter,
-    NativeAdapter, PepitaAdapter, SystemdAdapter, WosAdapter,
+    ContainerAdapter, ContainerRuntime, LaunchdAdapter, NativeAdapter, PepitaAdapter,
+    SystemdAdapter, WosAdapter, select_adapter, select_adapter_auto,
 };
 pub use config::{DaemonConfig, ResourceConfig};
 pub use daemon::{Daemon, DaemonContext, DaemonContextHandle};
 pub use error::{DaemonError, Result};
 pub use manager::{BackoffConfig, DaemonManager, ManagedDaemon, RestartPolicy};
 pub use metrics::DaemonMetrics;
-pub use platform::{detect_platform, Platform};
+pub use platform::{Platform, detect_platform};
 pub use types::{DaemonId, DaemonStatus, ExitReason, FailureReason, HealthStatus, Signal};

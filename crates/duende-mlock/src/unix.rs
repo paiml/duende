@@ -25,9 +25,7 @@ pub fn lock_with_config(config: MlockConfig) -> Result<MlockStatus, MlockError> 
         Ok(MlockStatus::Locked { bytes_locked })
     } else {
         // Failure - get errno
-        let errno = std::io::Error::last_os_error()
-            .raw_os_error()
-            .unwrap_or(-1);
+        let errno = std::io::Error::last_os_error().raw_os_error().unwrap_or(-1);
 
         if config.required() {
             Err(MlockError::from_errno(errno))
@@ -45,9 +43,7 @@ pub fn unlock_all() -> Result<(), MlockError> {
     if result == 0 {
         Ok(())
     } else {
-        let errno = std::io::Error::last_os_error()
-            .raw_os_error()
-            .unwrap_or(-1);
+        let errno = std::io::Error::last_os_error().raw_os_error().unwrap_or(-1);
         Err(MlockError::from_errno(errno))
     }
 }
@@ -116,10 +112,7 @@ mod tests {
 
     #[test]
     fn test_lock_with_empty_flags() {
-        let config = MlockConfig::builder()
-            .current(false)
-            .future(false)
-            .build();
+        let config = MlockConfig::builder().current(false).future(false).build();
 
         let result = lock_with_config(config);
         assert!(result.is_ok());

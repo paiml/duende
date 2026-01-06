@@ -108,9 +108,7 @@ mod tests {
 
     #[test]
     fn test_locked_status() {
-        let status = MlockStatus::Locked {
-            bytes_locked: 4096,
-        };
+        let status = MlockStatus::Locked { bytes_locked: 4096 };
         assert!(status.is_locked());
         assert!(!status.is_failed());
         assert!(!status.is_unsupported());
@@ -146,9 +144,7 @@ mod tests {
 
     #[test]
     fn test_display_locked_kb() {
-        let status = MlockStatus::Locked {
-            bytes_locked: 4096,
-        };
+        let status = MlockStatus::Locked { bytes_locked: 4096 };
         assert_eq!(format!("{status}"), "locked (4 KB)");
     }
 

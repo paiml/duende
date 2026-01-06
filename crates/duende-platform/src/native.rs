@@ -165,7 +165,10 @@ impl PlatformAdapter for NativeAdapter {
         }
 
         #[cfg(not(unix))]
-        tracing::warn!(pid = pid, "tracer attachment not supported on this platform");
+        tracing::warn!(
+            pid = pid,
+            "tracer attachment not supported on this platform"
+        );
 
         // Return tracer handle for renacer integration
         // Full ptrace attachment is deferred to when tracing is actually needed
@@ -247,7 +250,10 @@ mod tests {
         let handle = DaemonHandle::native(pid);
 
         let result = adapter.attach_tracer(&handle).await;
-        assert!(result.is_ok(), "attach_tracer should succeed for existing process");
+        assert!(
+            result.is_ok(),
+            "attach_tracer should succeed for existing process"
+        );
         let tracer = result.expect("tracer should succeed");
         assert_eq!(tracer.platform, Platform::Native);
         assert!(tracer.id.contains(&pid.to_string()));
@@ -261,7 +267,10 @@ mod tests {
         let handle = DaemonHandle::native(4000000);
 
         let result = adapter.attach_tracer(&handle).await;
-        assert!(result.is_err(), "attach_tracer should fail for non-existent process");
+        assert!(
+            result.is_err(),
+            "attach_tracer should fail for non-existent process"
+        );
     }
 
     #[cfg(unix)]

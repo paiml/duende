@@ -242,7 +242,10 @@ mod tests {
         let start = std::time::Instant::now();
         injector.maybe_inject_latency().await;
         let elapsed = start.elapsed();
-        assert!(elapsed < Duration::from_millis(5), "Should not inject when inactive");
+        assert!(
+            elapsed < Duration::from_millis(5),
+            "Should not inject when inactive"
+        );
     }
 
     #[tokio::test]
@@ -254,7 +257,10 @@ mod tests {
         let start = std::time::Instant::now();
         injector.maybe_inject_latency().await;
         let elapsed = start.elapsed();
-        assert!(elapsed >= Duration::from_millis(45), "Should inject latency when active");
+        assert!(
+            elapsed >= Duration::from_millis(45),
+            "Should inject latency when active"
+        );
     }
 
     #[test]
@@ -278,7 +284,10 @@ mod tests {
                 break;
             }
         }
-        assert!(injected, "Should eventually inject error with 100% probability");
+        assert!(
+            injected,
+            "Should eventually inject error with 100% probability"
+        );
     }
 
     #[test]

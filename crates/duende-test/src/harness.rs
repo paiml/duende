@@ -5,8 +5,8 @@
 
 use std::time::{Duration, Instant};
 
-use duende_core::{Daemon, DaemonStatus, HealthStatus, Signal};
 use duende_core::types::HealthCheck;
+use duende_core::{Daemon, DaemonStatus, HealthStatus, Signal};
 use duende_platform::{DaemonHandle, NativeAdapter, Platform, PlatformAdapter, detect_platform};
 
 use crate::chaos::ChaosConfig;
@@ -155,7 +155,7 @@ impl TestDaemonHandle {
             passed: has_pid,
             message: self.inner.pid.map_or_else(
                 || Some("No PID assigned".to_string()),
-                |pid| Some(format!("PID: {pid}"))
+                |pid| Some(format!("PID: {pid}")),
             ),
         });
 
@@ -281,8 +281,8 @@ impl TestDaemonHandle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use duende_core::{DaemonConfig, DaemonContext, DaemonId, DaemonMetrics, ExitReason};
     use async_trait::async_trait;
+    use duende_core::{DaemonConfig, DaemonContext, DaemonId, DaemonMetrics, ExitReason};
 
     /// Mock daemon for testing.
     struct MockDaemon {
@@ -315,7 +315,10 @@ mod tests {
             Ok(())
         }
 
-        async fn run(&mut self, _ctx: &mut DaemonContext) -> duende_core::error::Result<ExitReason> {
+        async fn run(
+            &mut self,
+            _ctx: &mut DaemonContext,
+        ) -> duende_core::error::Result<ExitReason> {
             Ok(ExitReason::Graceful)
         }
 

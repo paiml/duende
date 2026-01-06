@@ -269,10 +269,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn test_as_flags_current_only() {
-        let config = MlockConfig::builder()
-            .current(true)
-            .future(false)
-            .build();
+        let config = MlockConfig::builder().current(true).future(false).build();
         let flags = config.as_flags();
         assert_eq!(flags, libc::MCL_CURRENT);
     }
@@ -280,10 +277,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn test_as_flags_none() {
-        let config = MlockConfig::builder()
-            .current(false)
-            .future(false)
-            .build();
+        let config = MlockConfig::builder().current(false).future(false).build();
         let flags = config.as_flags();
         assert_eq!(flags, 0);
     }

@@ -1,3 +1,10 @@
+// Examples are allowed to use expect/unwrap for simplicity
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    clippy::unnecessary_debug_formatting
+)]
+
 //! Duende Daemon Example
 //!
 //! Demonstrates the full daemon lifecycle using the Duende framework.
@@ -23,16 +30,15 @@
 //!     cargo run --example daemon -- --mlock
 //! ```
 
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 use duende_core::{
-    Daemon, DaemonConfig, DaemonContext, DaemonId, DaemonMetrics,
-    ExitReason, HealthStatus,
+    Daemon, DaemonConfig, DaemonContext, DaemonId, DaemonMetrics, ExitReason, HealthStatus,
 };
-use duende_platform::{lock_daemon_memory, is_memory_locked, MlockResult};
+use duende_platform::{MlockResult, is_memory_locked, lock_daemon_memory};
 use tokio::signal;
 
 /// Example counter daemon that increments a counter every second.
@@ -118,7 +124,10 @@ impl Daemon for CounterDaemon {
     }
 
     async fn shutdown(&mut self, timeout: Duration) -> duende_core::error::Result<()> {
-        println!("[SHUTDOWN] Graceful shutdown starting (timeout: {:?})", timeout);
+        println!(
+            "[SHUTDOWN] Graceful shutdown starting (timeout: {:?})",
+            timeout
+        );
 
         self.running.store(false, Ordering::SeqCst);
 
@@ -221,7 +230,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Health check
     let health = daemon.health_check().await;
-    println!("[HEALTH] Status: {}", if health.is_healthy() { "HEALTHY" } else { "UNHEALTHY" });
+    println!(
+        "[HEALTH] Status: {}",
+        if health.is_healthy() {
+            "HEALTHY"
+        } else {
+            "UNHEALTHY"
+        }
+    );
     println!();
 
     // Run daemon

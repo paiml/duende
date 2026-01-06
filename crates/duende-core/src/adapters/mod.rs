@@ -11,22 +11,22 @@
 //! - [`PepitaAdapter`]: pepita MicroVM integration (stub - returns `NotSupported`)
 //! - [`WosAdapter`]: WOS (WebAssembly OS) integration (stub - returns `NotSupported`)
 
-mod native;
-#[cfg(target_os = "linux")]
-mod systemd;
+mod container;
 #[cfg(target_os = "macos")]
 mod launchd;
-mod container;
+mod native;
 mod pepita;
+#[cfg(target_os = "linux")]
+mod systemd;
 mod wos;
 
-pub use native::NativeAdapter;
-#[cfg(target_os = "linux")]
-pub use systemd::SystemdAdapter as SystemdAdapterImpl;
+pub use container::{ContainerAdapter, ContainerRuntime};
 #[cfg(target_os = "macos")]
 pub use launchd::{LaunchdAdapter as LaunchdAdapterImpl, LaunchdDomain};
-pub use container::{ContainerAdapter, ContainerRuntime};
+pub use native::NativeAdapter;
 pub use pepita::PepitaAdapter;
+#[cfg(target_os = "linux")]
+pub use systemd::SystemdAdapter as SystemdAdapterImpl;
 pub use wos::WosAdapter;
 
 // Platform-specific adapters (stubs for now)
@@ -106,7 +106,10 @@ mod systemd_stub {
         }
 
         async fn attach_tracer(&self, _handle: &DaemonHandle) -> PlatformResult<TracerHandle> {
-            Err(PlatformError::not_supported(Platform::Linux, "attach_tracer"))
+            Err(PlatformError::not_supported(
+                Platform::Linux,
+                "attach_tracer",
+            ))
         }
     }
 }
@@ -182,7 +185,10 @@ mod launchd_stub {
         }
 
         async fn attach_tracer(&self, _handle: &DaemonHandle) -> PlatformResult<TracerHandle> {
-            Err(PlatformError::not_supported(Platform::MacOS, "attach_tracer"))
+            Err(PlatformError::not_supported(
+                Platform::MacOS,
+                "attach_tracer",
+            ))
         }
     }
 }
@@ -264,7 +270,10 @@ mod tests {
         // The result might be Ok (if systemd is available) or Err (if not)
         // but if it's Err, it shouldn't be NotSupported
         if let Err(e) = result {
-            assert!(!e.is_not_supported(), "Linux systemd adapter should not return NotSupported");
+            assert!(
+                !e.is_not_supported(),
+                "Linux systemd adapter should not return NotSupported"
+            );
         }
     }
 
@@ -345,7 +354,10 @@ mod tests {
 
         // These may fail (WOS not available) but should not return NotSupported
         if let Err(e) = adapter.signal(&handle, Signal::Term).await {
-            assert!(!e.is_not_supported(), "signal should not return NotSupported");
+            assert!(
+                !e.is_not_supported(),
+                "signal should not return NotSupported"
+            );
         }
 
         // status may succeed or fail based on environment
@@ -365,7 +377,10 @@ mod tests {
 
         // These may fail (pepita not installed, no KVM) but should not return NotSupported
         if let Err(e) = adapter.signal(&handle, Signal::Term).await {
-            assert!(!e.is_not_supported(), "signal should not return NotSupported");
+            assert!(
+                !e.is_not_supported(),
+                "signal should not return NotSupported"
+            );
         }
 
         // status returns Stopped for non-existent VMs
@@ -381,12 +396,16 @@ mod tests {
     async fn test_container_adapter_operations_not_stub() {
         // Container adapter is a real implementation, not a stub
         let adapter = ContainerAdapter::docker();
-        let handle = DaemonHandle::container(DaemonId::new(), "docker", "nonexistent-container-xyz");
+        let handle =
+            DaemonHandle::container(DaemonId::new(), "docker", "nonexistent-container-xyz");
 
         // These may fail (container doesn't exist, docker not installed)
         // but should not return NotSupported
         if let Err(e) = adapter.signal(&handle, Signal::Term).await {
-            assert!(!e.is_not_supported(), "signal should not return NotSupported");
+            assert!(
+                !e.is_not_supported(),
+                "signal should not return NotSupported"
+            );
         }
 
         // status() returns Stopped for non-existent containers
@@ -423,7 +442,10 @@ mod tests {
 
         // These may fail (unit doesn't exist) but should not return NotSupported
         if let Err(e) = adapter.signal(&handle, Signal::Term).await {
-            assert!(!e.is_not_supported(), "signal should not return NotSupported on Linux");
+            assert!(
+                !e.is_not_supported(),
+                "signal should not return NotSupported on Linux"
+            );
         }
 
         // status() returns a status even for non-existent units (Stopped)

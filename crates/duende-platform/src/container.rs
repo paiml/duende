@@ -281,9 +281,7 @@ impl PlatformAdapter for ContainerAdapter {
         }
 
         // Get container ID from output
-        let container_id = String::from_utf8_lossy(&output.stdout)
-            .trim()
-            .to_string();
+        let container_id = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
         Ok(DaemonHandle::container(container_id))
     }
@@ -392,10 +390,12 @@ mod tests {
         assert!(podman.socket_path.to_string_lossy().contains("podman.sock"));
 
         let containerd = ContainerAdapter::with_runtime(ContainerRuntime::Containerd);
-        assert!(containerd
-            .socket_path
-            .to_string_lossy()
-            .contains("containerd.sock"));
+        assert!(
+            containerd
+                .socket_path
+                .to_string_lossy()
+                .contains("containerd.sock")
+        );
     }
 
     #[test]

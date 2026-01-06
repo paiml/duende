@@ -100,7 +100,9 @@ impl fmt::Display for MlockError {
                 "resource limit: RLIMIT_MEMLOCK too low or insufficient memory \
                  (docker: --ulimit memlock=-1:-1)"
             ),
-            Self::InvalidArgument => write!(f, "invalid argument: unsupported flags for this kernel"),
+            Self::InvalidArgument => {
+                write!(f, "invalid argument: unsupported flags for this kernel")
+            }
             Self::WouldBlock => write!(f, "would block: some pages could not be locked"),
             Self::Unknown(errno) => write!(f, "mlock failed with errno={errno}"),
         }

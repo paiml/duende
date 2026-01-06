@@ -4,11 +4,8 @@
 //! Section 9.2 using Popperian falsification methodology.
 
 use crate::adapter::{DaemonHandle, PlatformAdapter};
-use crate::adapters::{
-    select_adapter, LaunchdAdapter, NativeAdapter,
-    PepitaAdapter, SystemdAdapter, WosAdapter,
-};
-use crate::platform::{detect_platform, Platform};
+use crate::adapters::{LaunchdAdapter, NativeAdapter, SystemdAdapter, select_adapter};
+use crate::platform::{Platform, detect_platform};
 use crate::tests::mocks::MockDaemon;
 use crate::types::{DaemonId, Signal};
 
@@ -60,7 +57,10 @@ async fn f103_native_adapter_spawns() {
     let adapter = NativeAdapter::new();
     let daemon = MockDaemon::new("test");
 
-    let handle = adapter.spawn(Box::new(daemon)).await.expect("spawn should succeed");
+    let handle = adapter
+        .spawn(Box::new(daemon))
+        .await
+        .expect("spawn should succeed");
 
     // Handle should be valid
     assert!(!handle.id().as_uuid().is_nil());
@@ -72,7 +72,10 @@ async fn f104_native_adapter_tracks_pid() {
     let adapter = NativeAdapter::new();
     let daemon = MockDaemon::new("test");
 
-    let handle = adapter.spawn(Box::new(daemon)).await.expect("spawn should succeed");
+    let handle = adapter
+        .spawn(Box::new(daemon))
+        .await
+        .expect("spawn should succeed");
 
     // Should have a valid PID
     if let crate::adapter::HandleData::Native { pid, .. } = handle.handle_data() {
@@ -88,7 +91,10 @@ async fn f105_native_adapter_signals() {
     let adapter = NativeAdapter::new();
     let daemon = MockDaemon::new("test");
 
-    let handle = adapter.spawn(Box::new(daemon)).await.expect("spawn should succeed");
+    let handle = adapter
+        .spawn(Box::new(daemon))
+        .await
+        .expect("spawn should succeed");
 
     // Should be able to send a non-terminating signal
     adapter
@@ -108,18 +114,30 @@ async fn f106_native_adapter_reports_status() {
     let adapter = NativeAdapter::new();
     let daemon = MockDaemon::new("test");
 
-    let handle = adapter.spawn(Box::new(daemon)).await.expect("spawn should succeed");
+    let handle = adapter
+        .spawn(Box::new(daemon))
+        .await
+        .expect("spawn should succeed");
 
     // Should be running
-    let status = adapter.status(&handle).await.expect("status should succeed");
+    let status = adapter
+        .status(&handle)
+        .await
+        .expect("status should succeed");
     assert_eq!(status, DaemonStatus::Running);
 
     // Kill and check status
     adapter.signal(&handle, Signal::Kill).await.ok();
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-    let status = adapter.status(&handle).await.expect("status should succeed");
-    assert!(status.is_terminal(), "Should be in terminal state after kill");
+    let status = adapter
+        .status(&handle)
+        .await
+        .expect("status should succeed");
+    assert!(
+        status.is_terminal(),
+        "Should be in terminal state after kill"
+    );
 }
 
 /// F107: Stub adapters return NotSupported
@@ -141,10 +159,18 @@ async fn f107_stub_adapters_not_supported() {
     for adapter in adapters {
         let daemon = MockDaemon::new("test");
         let result = adapter.spawn(Box::new(daemon)).await;
-        assert!(result.is_err(), "Stub adapter spawn should fail for {:?}", adapter.platform());
+        assert!(
+            result.is_err(),
+            "Stub adapter spawn should fail for {:?}",
+            adapter.platform()
+        );
 
         let err = result.unwrap_err();
-        assert!(err.is_not_supported(), "Error should be NotSupported for {:?}", adapter.platform());
+        assert!(
+            err.is_not_supported(),
+            "Error should be NotSupported for {:?}",
+            adapter.platform()
+        );
     }
 }
 
@@ -193,15 +219,24 @@ fn f109_handle_display_informative() {
 
     let handle = DaemonHandle::native(id, 12345);
     let display = format!("{:?}", handle);
-    assert!(display.contains("Native"), "Display should mention platform");
+    assert!(
+        display.contains("Native"),
+        "Display should mention platform"
+    );
 
     let handle = DaemonHandle::systemd(id, "test.service");
     let display = format!("{:?}", handle);
-    assert!(display.contains("Systemd"), "Display should mention platform");
+    assert!(
+        display.contains("Systemd"),
+        "Display should mention platform"
+    );
 
     let handle = DaemonHandle::container(id, "docker", "abc123");
     let display = format!("{:?}", handle);
-    assert!(display.contains("Container"), "Display should mention platform");
+    assert!(
+        display.contains("Container"),
+        "Display should mention platform"
+    );
 }
 
 /// F110: Platform isolation flags correct

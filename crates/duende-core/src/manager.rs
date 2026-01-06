@@ -25,8 +25,7 @@ use crate::types::{DaemonId, DaemonStatus, ExitReason, HealthStatus, Signal};
 ///
 /// # Toyota Way: Jidoka
 /// Stop-on-error with automatic recovery when safe.
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub enum RestartPolicy {
     /// Never restart (run once).
     Never,
@@ -40,7 +39,6 @@ pub enum RestartPolicy {
     /// Custom policy with backoff.
     WithBackoff(BackoffConfig),
 }
-
 
 impl RestartPolicy {
     /// Returns true if the daemon should be restarted given the exit reason.
@@ -884,15 +882,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_with_health_check_interval() {
-        let manager = DaemonManager::new()
-            .with_health_check_interval(Duration::from_secs(60));
+        let manager = DaemonManager::new().with_health_check_interval(Duration::from_secs(60));
         assert_eq!(manager.health_check_interval, Duration::from_secs(60));
     }
 
     #[tokio::test]
     async fn test_with_shutdown_timeout() {
-        let manager = DaemonManager::new()
-            .with_shutdown_timeout(Duration::from_secs(120));
+        let manager = DaemonManager::new().with_shutdown_timeout(Duration::from_secs(120));
         assert_eq!(manager.shutdown_timeout, Duration::from_secs(120));
     }
 
@@ -948,7 +944,10 @@ mod tests {
             .unwrap();
 
         // Set to Running but no context handle
-        manager.update_status(id, DaemonStatus::Running).await.unwrap();
+        manager
+            .update_status(id, DaemonStatus::Running)
+            .await
+            .unwrap();
 
         // Signal should fail because no handle
         let result = manager.signal(id, Signal::Term).await;

@@ -171,7 +171,9 @@ pub fn is_memory_locked() -> bool {
         for line in status.lines() {
             if line.starts_with("VmLck:") {
                 let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() >= 2 && let Ok(kb) = parts[1].parse::<u64>() {
+                if parts.len() >= 2
+                    && let Ok(kb) = parts[1].parse::<u64>()
+                {
                     return kb > 0;
                 }
             }

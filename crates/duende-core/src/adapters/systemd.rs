@@ -72,7 +72,10 @@ impl SystemdAdapter {
     /// Creates adapter with custom unit directory.
     #[must_use]
     pub fn with_unit_dir(unit_dir: PathBuf, user_mode: bool) -> Self {
-        Self { unit_dir, user_mode }
+        Self {
+            unit_dir,
+            user_mode,
+        }
     }
 
     /// Returns the unit directory path.
@@ -182,8 +185,10 @@ impl PlatformAdapter for SystemdAdapter {
         // Note: This creates a simple transient service. For full resource control,
         // use DaemonConfig passed through a proper spawn_with_config method.
         let mut cmd = self.systemd_run_cmd();
-        cmd.arg("--unit").arg(&unit_name)
-            .arg("--description").arg(format!("Duende daemon: {}", daemon_name))
+        cmd.arg("--unit")
+            .arg(&unit_name)
+            .arg("--description")
+            .arg(format!("Duende daemon: {}", daemon_name))
             .arg("--remain-after-exit")
             .arg("--collect");
 
@@ -221,7 +226,8 @@ impl PlatformAdapter for SystemdAdapter {
         // Use systemctl kill to send signal
         let mut cmd = self.systemctl_cmd();
         cmd.arg("kill")
-            .arg("--signal").arg(Self::signal_name(sig))
+            .arg("--signal")
+            .arg(Self::signal_name(sig))
             .arg(unit_name);
 
         let output = cmd.output().await.map_err(|e| {
@@ -353,8 +359,14 @@ mod tests {
 
     #[test]
     fn test_unit_name_generation() {
-        assert_eq!(SystemdAdapter::unit_name("my-daemon"), "duende-my-daemon.service");
-        assert_eq!(SystemdAdapter::unit_name("my daemon"), "duende-my-daemon.service");
+        assert_eq!(
+            SystemdAdapter::unit_name("my-daemon"),
+            "duende-my-daemon.service"
+        );
+        assert_eq!(
+            SystemdAdapter::unit_name("my daemon"),
+            "duende-my-daemon.service"
+        );
     }
 
     #[test]
@@ -367,13 +379,19 @@ mod tests {
     #[test]
     fn test_parse_status_running() {
         let output = "● test.service - Test\n   Active: active (running) since...";
-        assert_eq!(SystemdAdapter::parse_status(output, 0), DaemonStatus::Running);
+        assert_eq!(
+            SystemdAdapter::parse_status(output, 0),
+            DaemonStatus::Running
+        );
     }
 
     #[test]
     fn test_parse_status_stopped() {
         let output = "● test.service - Test\n   Active: inactive (dead)";
-        assert_eq!(SystemdAdapter::parse_status(output, 3), DaemonStatus::Stopped);
+        assert_eq!(
+            SystemdAdapter::parse_status(output, 3),
+            DaemonStatus::Stopped
+        );
     }
 
     #[test]
@@ -388,7 +406,10 @@ mod tests {
     #[test]
     fn test_parse_status_starting() {
         let output = "● test.service - Test\n   Active: activating (start)";
-        assert_eq!(SystemdAdapter::parse_status(output, 0), DaemonStatus::Starting);
+        assert_eq!(
+            SystemdAdapter::parse_status(output, 0),
+            DaemonStatus::Starting
+        );
     }
 
     #[test]

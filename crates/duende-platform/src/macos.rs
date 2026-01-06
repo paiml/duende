@@ -99,10 +99,7 @@ impl MacOSAdapter {
         // Working directory
         if let Some(ref working_dir) = config.working_dir {
             plist.push_str("    <key>WorkingDirectory</key>\n");
-            plist.push_str(&format!(
-                "    <string>{}</string>\n",
-                working_dir.display()
-            ));
+            plist.push_str(&format!("    <string>{}</string>\n", working_dir.display()));
         }
 
         // User/Group (only for system daemons)

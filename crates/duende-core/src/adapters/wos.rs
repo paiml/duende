@@ -12,8 +12,8 @@ use crate::types::{DaemonStatus, FailureReason, Signal};
 
 use async_trait::async_trait;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
 use tokio::sync::RwLock;
 
 /// Process ID allocator (starts at 2, as PID 1 is init).
@@ -75,6 +75,7 @@ pub struct WosAdapter {
 
 /// Information about a WOS process.
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Fields used for future process management operations
 struct ProcessInfo {
     /// Process ID
     pid: u32,
@@ -90,6 +91,7 @@ struct ProcessInfo {
 
 /// WOS process state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)] // Variants used for future process state management
 enum ProcessState {
     /// Process is ready to run
     Ready,
@@ -237,12 +239,17 @@ impl PlatformAdapter for WosAdapter {
             // wos-ctl spawn --name <name> --priority <level> --wasm <path>
             let output = tokio::process::Command::new("wos-ctl")
                 .arg("spawn")
-                .arg("--name").arg(&daemon_name)
-                .arg("--priority").arg(priority.to_string())
-                .arg("--pid").arg(pid.to_string())
+                .arg("--name")
+                .arg(&daemon_name)
+                .arg("--priority")
+                .arg(priority.to_string())
+                .arg("--pid")
+                .arg(pid.to_string())
                 .output()
                 .await
-                .map_err(|e| PlatformError::spawn_failed(format!("Failed to execute wos-ctl: {}", e)))?;
+                .map_err(|e| {
+                    PlatformError::spawn_failed(format!("Failed to execute wos-ctl: {}", e))
+                })?;
 
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
@@ -268,19 +275,23 @@ impl PlatformAdapter for WosAdapter {
     }
 
     async fn signal(&self, handle: &DaemonHandle, sig: Signal) -> PlatformResult<()> {
-        let pid = handle.pid().ok_or_else(|| {
-            PlatformError::spawn_failed("Invalid handle type for WOS adapter")
-        })?;
+        let pid = handle
+            .pid()
+            .ok_or_else(|| PlatformError::spawn_failed("Invalid handle type for WOS adapter"))?;
 
         if Self::wos_ctl_available().await {
             // wos-ctl signal --pid <pid> --signal <sig>
             let output = tokio::process::Command::new("wos-ctl")
                 .arg("signal")
-                .arg("--pid").arg(pid.to_string())
-                .arg("--signal").arg(Self::signal_number(sig).to_string())
+                .arg("--pid")
+                .arg(pid.to_string())
+                .arg("--signal")
+                .arg(Self::signal_number(sig).to_string())
                 .output()
                 .await
-                .map_err(|e| PlatformError::signal_failed(format!("Failed to execute wos-ctl: {}", e)))?;
+                .map_err(|e| {
+                    PlatformError::signal_failed(format!("Failed to execute wos-ctl: {}", e))
+                })?;
 
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
@@ -310,19 +321,22 @@ impl PlatformAdapter for WosAdapter {
     }
 
     async fn status(&self, handle: &DaemonHandle) -> PlatformResult<DaemonStatus> {
-        let pid = handle.pid().ok_or_else(|| {
-            PlatformError::spawn_failed("Invalid handle type for WOS adapter")
-        })?;
+        let pid = handle
+            .pid()
+            .ok_or_else(|| PlatformError::spawn_failed("Invalid handle type for WOS adapter"))?;
 
         if Self::wos_ctl_available().await {
             // wos-ctl status --pid <pid> --json
             let output = tokio::process::Command::new("wos-ctl")
                 .arg("status")
-                .arg("--pid").arg(pid.to_string())
+                .arg("--pid")
+                .arg(pid.to_string())
                 .arg("--json")
                 .output()
                 .await
-                .map_err(|e| PlatformError::status_failed(format!("Failed to execute wos-ctl: {}", e)))?;
+                .map_err(|e| {
+                    PlatformError::status_failed(format!("Failed to execute wos-ctl: {}", e))
+                })?;
 
             if !output.status.success() {
                 return Ok(DaemonStatus::Stopped);
@@ -365,9 +379,9 @@ impl PlatformAdapter for WosAdapter {
     }
 
     async fn attach_tracer(&self, handle: &DaemonHandle) -> PlatformResult<TracerHandle> {
-        let pid = handle.pid().ok_or_else(|| {
-            PlatformError::spawn_failed("Invalid handle type for WOS adapter")
-        })?;
+        let pid = handle
+            .pid()
+            .ok_or_else(|| PlatformError::spawn_failed("Invalid handle type for WOS adapter"))?;
 
         if pid == 0 {
             return Err(PlatformError::tracer_failed("Process not running"));
@@ -403,10 +417,13 @@ impl WosAdapter {
         if Self::wos_ctl_available().await {
             let output = tokio::process::Command::new("wos-ctl")
                 .arg("ps")
-                .arg("--format").arg("pid,name")
+                .arg("--format")
+                .arg("pid,name")
                 .output()
                 .await
-                .map_err(|e| PlatformError::spawn_failed(format!("Failed to execute wos-ctl: {}", e)))?;
+                .map_err(|e| {
+                    PlatformError::spawn_failed(format!("Failed to execute wos-ctl: {}", e))
+                })?;
 
             if output.status.success() {
                 let stdout = String::from_utf8_lossy(&output.stdout);
@@ -444,11 +461,15 @@ impl WosAdapter {
         if Self::wos_ctl_available().await {
             let output = tokio::process::Command::new("wos-ctl")
                 .arg("renice")
-                .arg("--pid").arg(pid.to_string())
-                .arg("--priority").arg(priority.to_string())
+                .arg("--pid")
+                .arg(pid.to_string())
+                .arg("--priority")
+                .arg(priority.to_string())
                 .output()
                 .await
-                .map_err(|e| PlatformError::spawn_failed(format!("Failed to execute wos-ctl: {}", e)))?;
+                .map_err(|e| {
+                    PlatformError::spawn_failed(format!("Failed to execute wos-ctl: {}", e))
+                })?;
 
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
@@ -488,7 +509,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "WOS priority must be 0-7")]
     fn test_wos_adapter_invalid_priority() {
-        WosAdapter::with_priority(8);
+        let _ = WosAdapter::with_priority(8);
     }
 
     #[test]
@@ -531,7 +552,10 @@ mod tests {
     fn test_extract_exit_code() {
         assert_eq!(WosAdapter::extract_exit_code(r#""exit_code": 0"#), Some(0));
         assert_eq!(WosAdapter::extract_exit_code(r#""exit_code": 1"#), Some(1));
-        assert_eq!(WosAdapter::extract_exit_code(r#""exit_code":137"#), Some(137));
+        assert_eq!(
+            WosAdapter::extract_exit_code(r#""exit_code":137"#),
+            Some(137)
+        );
         assert_eq!(WosAdapter::extract_exit_code("no exit code"), None);
     }
 
@@ -551,15 +575,30 @@ mod tests {
 
         #[async_trait::async_trait]
         impl crate::daemon::Daemon for TestDaemon {
-            fn id(&self) -> crate::types::DaemonId { self.id }
-            fn name(&self) -> &str { "test" }
-            async fn init(&mut self, _: &crate::config::DaemonConfig) -> crate::error::Result<()> { Ok(()) }
-            async fn run(&mut self, _: &mut crate::daemon::DaemonContext) -> crate::error::Result<crate::types::ExitReason> {
+            fn id(&self) -> crate::types::DaemonId {
+                self.id
+            }
+            fn name(&self) -> &str {
+                "test"
+            }
+            async fn init(&mut self, _: &crate::config::DaemonConfig) -> crate::error::Result<()> {
+                Ok(())
+            }
+            async fn run(
+                &mut self,
+                _: &mut crate::daemon::DaemonContext,
+            ) -> crate::error::Result<crate::types::ExitReason> {
                 Ok(crate::types::ExitReason::Graceful)
             }
-            async fn shutdown(&mut self, _: std::time::Duration) -> crate::error::Result<()> { Ok(()) }
-            async fn health_check(&self) -> crate::types::HealthStatus { crate::types::HealthStatus::healthy(1) }
-            fn metrics(&self) -> &crate::metrics::DaemonMetrics { &self.metrics }
+            async fn shutdown(&mut self, _: std::time::Duration) -> crate::error::Result<()> {
+                Ok(())
+            }
+            async fn health_check(&self) -> crate::types::HealthStatus {
+                crate::types::HealthStatus::healthy(1)
+            }
+            fn metrics(&self) -> &crate::metrics::DaemonMetrics {
+                &self.metrics
+            }
         }
 
         let daemon = TestDaemon {

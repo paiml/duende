@@ -130,7 +130,9 @@ impl ResourceLimiter {
     /// - Moving process to cgroup fails
     #[cfg(target_os = "linux")]
     pub fn apply(&self, pid: u32) -> Result<()> {
-        let cgroup_path = self.cgroup_base.join(format!("{}-{}", self.cgroup_prefix, pid));
+        let cgroup_path = self
+            .cgroup_base
+            .join(format!("{}-{}", self.cgroup_prefix, pid));
 
         // Create cgroup directory if it doesn't exist
         if !cgroup_path.exists() {
@@ -170,9 +172,8 @@ impl ResourceLimiter {
             if cpu_max.exists() {
                 // cpu.max format: "quota period" where quota is in microseconds
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-                let quota_us =
-                    ((self.limits.cpu_quota_percent / 100.0) * self.limits.cpu_period_us as f64)
-                        as u64;
+                let quota_us = ((self.limits.cpu_quota_percent / 100.0)
+                    * self.limits.cpu_period_us as f64) as u64;
                 let cpu_max_value = format!("{} {}", quota_us, self.limits.cpu_period_us);
                 std::fs::write(&cpu_max, &cpu_max_value).map_err(|e| {
                     PolicyError::ResourceLimit(format!("failed to set cpu.max: {}", e))
@@ -242,13 +243,17 @@ impl ResourceLimiter {
     /// Returns an error if cgroup removal fails.
     #[cfg(target_os = "linux")]
     pub fn remove(&self, pid: u32) -> Result<()> {
-        let cgroup_path = self.cgroup_base.join(format!("{}-{}", self.cgroup_prefix, pid));
+        let cgroup_path = self
+            .cgroup_base
+            .join(format!("{}-{}", self.cgroup_prefix, pid));
 
         if cgroup_path.exists() {
             // First, move any remaining processes to parent cgroup
             // (cgroup can only be removed when empty)
             let cgroup_procs = cgroup_path.join("cgroup.procs");
-            if let Ok(procs) = std::fs::read_to_string(&cgroup_procs) && !procs.trim().is_empty() {
+            if let Ok(procs) = std::fs::read_to_string(&cgroup_procs)
+                && !procs.trim().is_empty()
+            {
                 // Move to parent (root cgroup)
                 let parent_procs = self.cgroup_base.join("cgroup.procs");
                 for line in procs.lines() {
@@ -372,8 +377,8 @@ mod tests {
             let temp_dir = TempDir::new().unwrap();
             create_mock_cgroup(&temp_dir);
 
-            let limiter =
-                ResourceLimiter::new(ResourceLimits::default()).with_cgroup_base(temp_dir.path().to_path_buf());
+            let limiter = ResourceLimiter::new(ResourceLimits::default())
+                .with_cgroup_base(temp_dir.path().to_path_buf());
 
             assert!(limiter.cgroups_v2_available());
         }
@@ -383,8 +388,8 @@ mod tests {
             let temp_dir = TempDir::new().unwrap();
             // Don't create cgroup.controllers
 
-            let limiter =
-                ResourceLimiter::new(ResourceLimits::default()).with_cgroup_base(temp_dir.path().to_path_buf());
+            let limiter = ResourceLimiter::new(ResourceLimits::default())
+                .with_cgroup_base(temp_dir.path().to_path_buf());
 
             assert!(!limiter.cgroups_v2_available());
         }

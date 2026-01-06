@@ -110,7 +110,10 @@ impl LaunchdAdapter {
 
     /// Generates a service label from daemon name.
     fn service_label(daemon_name: &str) -> String {
-        format!("com.duende.{}", daemon_name.replace(' ', "-").replace('_', "-"))
+        format!(
+            "com.duende.{}",
+            daemon_name.replace(' ', "-").replace('_', "-")
+        )
     }
 
     /// Generates a plist file path.
@@ -220,16 +223,20 @@ impl PlatformAdapter for LaunchdAdapter {
         let plist_path = self.plist_path(&label);
 
         // Ensure plist directory exists
-        tokio::fs::create_dir_all(&self.plist_dir).await.map_err(|e| {
-            PlatformError::spawn_failed(format!("Failed to create plist directory: {}", e))
-        })?;
+        tokio::fs::create_dir_all(&self.plist_dir)
+            .await
+            .map_err(|e| {
+                PlatformError::spawn_failed(format!("Failed to create plist directory: {}", e))
+            })?;
 
         // Generate and write plist file
         // For now, use /bin/true as placeholder - real implementation would use daemon config
         let plist_content = Self::generate_plist(&label, &daemon_name, "/usr/bin/true");
-        tokio::fs::write(&plist_path, &plist_content).await.map_err(|e| {
-            PlatformError::spawn_failed(format!("Failed to write plist file: {}", e))
-        })?;
+        tokio::fs::write(&plist_path, &plist_content)
+            .await
+            .map_err(|e| {
+                PlatformError::spawn_failed(format!("Failed to write plist file: {}", e))
+            })?;
 
         // Bootstrap the service
         let output = Command::new("launchctl")
@@ -238,7 +245,9 @@ impl PlatformAdapter for LaunchdAdapter {
             .arg(&plist_path)
             .output()
             .await
-            .map_err(|e| PlatformError::spawn_failed(format!("Failed to execute launchctl: {}", e)))?;
+            .map_err(|e| {
+                PlatformError::spawn_failed(format!("Failed to execute launchctl: {}", e))
+            })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -265,7 +274,9 @@ impl PlatformAdapter for LaunchdAdapter {
             .arg(format!("{}/{}", self.domain.target(), label))
             .output()
             .await
-            .map_err(|e| PlatformError::signal_failed(format!("Failed to execute launchctl: {}", e)))?;
+            .map_err(|e| {
+                PlatformError::signal_failed(format!("Failed to execute launchctl: {}", e))
+            })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -287,7 +298,9 @@ impl PlatformAdapter for LaunchdAdapter {
             .arg("list")
             .output()
             .await
-            .map_err(|e| PlatformError::status_failed(format!("Failed to execute launchctl: {}", e)))?;
+            .map_err(|e| {
+                PlatformError::status_failed(format!("Failed to execute launchctl: {}", e))
+            })?;
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         Ok(Self::parse_status(&stdout, label))
@@ -336,7 +349,9 @@ impl LaunchdAdapter {
             .arg(format!("{}/{}", self.domain.target(), label))
             .output()
             .await
-            .map_err(|e| PlatformError::spawn_failed(format!("Failed to execute launchctl: {}", e)))?;
+            .map_err(|e| {
+                PlatformError::spawn_failed(format!("Failed to execute launchctl: {}", e))
+            })?;
 
         if !output.status.success() {
             // Ignore errors - service might already be unloaded
@@ -365,7 +380,10 @@ mod tests {
     fn test_launchd_adapter_system() {
         let adapter = LaunchdAdapter::system();
         assert_eq!(adapter.domain(), LaunchdDomain::System);
-        assert_eq!(adapter.plist_dir(), &PathBuf::from("/Library/LaunchDaemons"));
+        assert_eq!(
+            adapter.plist_dir(),
+            &PathBuf::from("/Library/LaunchDaemons")
+        );
     }
 
     #[test]

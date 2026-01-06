@@ -17,7 +17,10 @@ async fn f021_sigterm_triggers_graceful_shutdown() {
     let (mut ctx, handle) = DaemonContext::new(config);
 
     // Send SIGTERM
-    handle.send_signal(Signal::Term).await.expect("send should succeed");
+    handle
+        .send_signal(Signal::Term)
+        .await
+        .expect("send should succeed");
 
     // Receive the signal
     let sig = ctx.try_recv_signal();
@@ -33,7 +36,10 @@ async fn f022_sigint_triggers_graceful_shutdown() {
     let config = DaemonConfig::new("test", "/bin/test");
     let (mut ctx, handle) = DaemonContext::new(config);
 
-    handle.send_signal(Signal::Int).await.expect("send should succeed");
+    handle
+        .send_signal(Signal::Int)
+        .await
+        .expect("send should succeed");
     let _ = ctx.try_recv_signal();
     assert!(ctx.should_shutdown(), "SIGINT should trigger shutdown");
 }
@@ -44,7 +50,10 @@ async fn f023_sigquit_triggers_graceful_shutdown() {
     let config = DaemonConfig::new("test", "/bin/test");
     let (mut ctx, handle) = DaemonContext::new(config);
 
-    handle.send_signal(Signal::Quit).await.expect("send should succeed");
+    handle
+        .send_signal(Signal::Quit)
+        .await
+        .expect("send should succeed");
     let _ = ctx.try_recv_signal();
     assert!(ctx.should_shutdown(), "SIGQUIT should trigger shutdown");
 }
@@ -55,7 +64,10 @@ async fn f024_sighup_does_not_trigger_shutdown() {
     let config = DaemonConfig::new("test", "/bin/test");
     let (mut ctx, handle) = DaemonContext::new(config);
 
-    handle.send_signal(Signal::Hup).await.expect("send should succeed");
+    handle
+        .send_signal(Signal::Hup)
+        .await
+        .expect("send should succeed");
     let sig = ctx.try_recv_signal();
     assert_eq!(sig, Some(Signal::Hup));
     assert!(!ctx.should_shutdown(), "SIGHUP should NOT trigger shutdown");
@@ -67,10 +79,16 @@ async fn f025_sigusr1_delivered_to_daemon() {
     let config = DaemonConfig::new("test", "/bin/test");
     let (mut ctx, handle) = DaemonContext::new(config);
 
-    handle.send_signal(Signal::Usr1).await.expect("send should succeed");
+    handle
+        .send_signal(Signal::Usr1)
+        .await
+        .expect("send should succeed");
     let sig = ctx.try_recv_signal();
     assert_eq!(sig, Some(Signal::Usr1), "SIGUSR1 should be delivered");
-    assert!(!ctx.should_shutdown(), "SIGUSR1 should not trigger shutdown");
+    assert!(
+        !ctx.should_shutdown(),
+        "SIGUSR1 should not trigger shutdown"
+    );
 }
 
 /// F026: SIGUSR2 delivered to daemon
@@ -79,10 +97,16 @@ async fn f026_sigusr2_delivered_to_daemon() {
     let config = DaemonConfig::new("test", "/bin/test");
     let (mut ctx, handle) = DaemonContext::new(config);
 
-    handle.send_signal(Signal::Usr2).await.expect("send should succeed");
+    handle
+        .send_signal(Signal::Usr2)
+        .await
+        .expect("send should succeed");
     let sig = ctx.try_recv_signal();
     assert_eq!(sig, Some(Signal::Usr2), "SIGUSR2 should be delivered");
-    assert!(!ctx.should_shutdown(), "SIGUSR2 should not trigger shutdown");
+    assert!(
+        !ctx.should_shutdown(),
+        "SIGUSR2 should not trigger shutdown"
+    );
 }
 
 /// F027: SIGSTOP pauses daemon (status tracking test)
@@ -352,7 +376,10 @@ async fn f039_manager_signal_forwards_correctly() {
     manager.set_context_handle(id, context_handle).await.ok();
 
     // Now signal via manager
-    manager.signal(id, Signal::Usr1).await.expect("signal should succeed");
+    manager
+        .signal(id, Signal::Usr1)
+        .await
+        .expect("signal should succeed");
 
     // Verify signal was received
     let signal = ctx.try_recv_signal();

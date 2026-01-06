@@ -35,10 +35,7 @@ impl Platform {
     /// Returns true if this platform supports process isolation.
     #[must_use]
     pub const fn supports_isolation(&self) -> bool {
-        matches!(
-            self,
-            Self::Container | Self::PepitaMicroVM | Self::Wos
-        )
+        matches!(self, Self::Container | Self::PepitaMicroVM | Self::Wos)
     }
 
     /// Returns true if this platform supports resource limits via cgroups.
@@ -145,9 +142,9 @@ fn is_container() -> bool {
             || cgroup.contains("containerd")
             || cgroup.contains("kubepods")
             || cgroup.contains("lxc"))
-        {
-            return true;
-        }
+    {
+        return true;
+    }
 
     // Check for container runtime env vars
     if std::env::var("KUBERNETES_SERVICE_HOST").is_ok() {

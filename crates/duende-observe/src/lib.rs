@@ -1,3 +1,6 @@
+// Iron Lotus: Allow unwrap/expect in tests for clear failure messages
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
+
 //! # duende-observe
 //!
 //! Observability integration for the Duende daemon framework.

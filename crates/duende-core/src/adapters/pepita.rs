@@ -12,8 +12,8 @@ use crate::types::{DaemonStatus, FailureReason, Signal};
 
 use async_trait::async_trait;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
 use tokio::sync::RwLock;
 
 /// Vsock CID allocator.
@@ -63,6 +63,7 @@ pub struct PepitaAdapter {
 
 /// Information about a running VM.
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Fields used for future VM management operations
 struct VmInfo {
     /// VM identifier
     vm_id: String,
@@ -76,6 +77,7 @@ struct VmInfo {
 
 /// VM state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)] // Variants used for future VM state management
 enum VmState {
     /// VM is starting
     Starting,
@@ -136,7 +138,10 @@ impl PepitaAdapter {
 
     /// Generates a VM ID from daemon name.
     fn vm_id(daemon_name: &str) -> String {
-        format!("duende-vm-{}", daemon_name.replace(' ', "-").replace('_', "-"))
+        format!(
+            "duende-vm-{}",
+            daemon_name.replace(' ', "-").replace('_', "-")
+        )
     }
 
     /// Checks if KVM is available.
@@ -197,11 +202,15 @@ impl PlatformAdapter for PepitaAdapter {
         }
 
         let kernel = self.default_kernel.as_ref().ok_or_else(|| {
-            PlatformError::Config("No kernel image configured. Use with_images() to set kernel path.".into())
+            PlatformError::Config(
+                "No kernel image configured. Use with_images() to set kernel path.".into(),
+            )
         })?;
 
         let rootfs = self.default_rootfs.as_ref().ok_or_else(|| {
-            PlatformError::Config("No rootfs image configured. Use with_images() to set rootfs path.".into())
+            PlatformError::Config(
+                "No rootfs image configured. Use with_images() to set rootfs path.".into(),
+            )
         })?;
 
         let daemon_name = daemon.name().to_string();
@@ -213,12 +222,18 @@ impl PlatformAdapter for PepitaAdapter {
         // pepita run --kernel <path> --rootfs <path> --vsock-cid <cid> --memory <mb> --cpus <n>
         let output = tokio::process::Command::new("pepita")
             .arg("run")
-            .arg("--kernel").arg(kernel)
-            .arg("--rootfs").arg(rootfs)
-            .arg("--vsock-cid").arg(vsock_cid.to_string())
-            .arg("--memory").arg("256") // Default 256MB
-            .arg("--cpus").arg("1")
-            .arg("--name").arg(&vm_id)
+            .arg("--kernel")
+            .arg(kernel)
+            .arg("--rootfs")
+            .arg(rootfs)
+            .arg("--vsock-cid")
+            .arg(vsock_cid.to_string())
+            .arg("--memory")
+            .arg("256") // Default 256MB
+            .arg("--cpus")
+            .arg("1")
+            .arg("--name")
+            .arg(&vm_id)
             .arg("--daemon") // Run in background
             .output()
             .await
@@ -246,12 +261,12 @@ impl PlatformAdapter for PepitaAdapter {
     }
 
     async fn signal(&self, handle: &DaemonHandle, sig: Signal) -> PlatformResult<()> {
-        let (vm_id, vsock_cid) = match (handle.pepita_vm_id(), handle.vsock_cid()) {
+        let (vm_id, _vsock_cid) = match (handle.pepita_vm_id(), handle.vsock_cid()) {
             (Some(id), Some(cid)) => (id, cid),
             _ => {
                 return Err(PlatformError::spawn_failed(
                     "Invalid handle type for pepita adapter",
-                ))
+                ));
             }
         };
 
@@ -259,11 +274,15 @@ impl PlatformAdapter for PepitaAdapter {
         // pepita signal --name <vm_id> --signal <sig>
         let output = tokio::process::Command::new("pepita")
             .arg("signal")
-            .arg("--name").arg(vm_id)
-            .arg("--signal").arg(Self::signal_number(sig).to_string())
+            .arg("--name")
+            .arg(vm_id)
+            .arg("--signal")
+            .arg(Self::signal_number(sig).to_string())
             .output()
             .await
-            .map_err(|e| PlatformError::signal_failed(format!("Failed to execute pepita: {}", e)))?;
+            .map_err(|e| {
+                PlatformError::signal_failed(format!("Failed to execute pepita: {}", e))
+            })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -284,19 +303,22 @@ impl PlatformAdapter for PepitaAdapter {
     }
 
     async fn status(&self, handle: &DaemonHandle) -> PlatformResult<DaemonStatus> {
-        let vm_id = handle.pepita_vm_id().ok_or_else(|| {
-            PlatformError::spawn_failed("Invalid handle type for pepita adapter")
-        })?;
+        let vm_id = handle
+            .pepita_vm_id()
+            .ok_or_else(|| PlatformError::spawn_failed("Invalid handle type for pepita adapter"))?;
 
         // Query pepita for VM status
         // pepita status --name <vm_id> --json
         let output = tokio::process::Command::new("pepita")
             .arg("status")
-            .arg("--name").arg(vm_id)
+            .arg("--name")
+            .arg(vm_id)
             .arg("--json")
             .output()
             .await
-            .map_err(|e| PlatformError::status_failed(format!("Failed to execute pepita: {}", e)))?;
+            .map_err(|e| {
+                PlatformError::status_failed(format!("Failed to execute pepita: {}", e))
+            })?;
 
         if !output.status.success() {
             // VM not found = stopped
@@ -318,9 +340,9 @@ impl PlatformAdapter for PepitaAdapter {
     }
 
     async fn attach_tracer(&self, handle: &DaemonHandle) -> PlatformResult<TracerHandle> {
-        let vsock_cid = handle.vsock_cid().ok_or_else(|| {
-            PlatformError::spawn_failed("Invalid handle type for pepita adapter")
-        })?;
+        let vsock_cid = handle
+            .vsock_cid()
+            .ok_or_else(|| PlatformError::spawn_failed("Invalid handle type for pepita adapter"))?;
 
         if vsock_cid == 0 {
             return Err(PlatformError::tracer_failed("VM not running"));
@@ -336,7 +358,8 @@ impl PepitaAdapter {
     pub async fn destroy(&self, vm_id: &str) -> PlatformResult<()> {
         let output = tokio::process::Command::new("pepita")
             .arg("destroy")
-            .arg("--name").arg(vm_id)
+            .arg("--name")
+            .arg(vm_id)
             .arg("--force")
             .output()
             .await
@@ -353,7 +376,8 @@ impl PepitaAdapter {
     pub async fn list_vms(&self) -> PlatformResult<Vec<String>> {
         let output = tokio::process::Command::new("pepita")
             .arg("list")
-            .arg("--format").arg("name")
+            .arg("--format")
+            .arg("name")
             .output()
             .await
             .map_err(|e| PlatformError::spawn_failed(format!("Failed to execute pepita: {}", e)))?;
@@ -444,15 +468,30 @@ mod tests {
 
         #[async_trait::async_trait]
         impl crate::daemon::Daemon for TestDaemon {
-            fn id(&self) -> crate::types::DaemonId { self.id }
-            fn name(&self) -> &str { "test" }
-            async fn init(&mut self, _: &crate::config::DaemonConfig) -> crate::error::Result<()> { Ok(()) }
-            async fn run(&mut self, _: &mut crate::daemon::DaemonContext) -> crate::error::Result<crate::types::ExitReason> {
+            fn id(&self) -> crate::types::DaemonId {
+                self.id
+            }
+            fn name(&self) -> &str {
+                "test"
+            }
+            async fn init(&mut self, _: &crate::config::DaemonConfig) -> crate::error::Result<()> {
+                Ok(())
+            }
+            async fn run(
+                &mut self,
+                _: &mut crate::daemon::DaemonContext,
+            ) -> crate::error::Result<crate::types::ExitReason> {
                 Ok(crate::types::ExitReason::Graceful)
             }
-            async fn shutdown(&mut self, _: std::time::Duration) -> crate::error::Result<()> { Ok(()) }
-            async fn health_check(&self) -> crate::types::HealthStatus { crate::types::HealthStatus::healthy(1) }
-            fn metrics(&self) -> &crate::metrics::DaemonMetrics { &self.metrics }
+            async fn shutdown(&mut self, _: std::time::Duration) -> crate::error::Result<()> {
+                Ok(())
+            }
+            async fn health_check(&self) -> crate::types::HealthStatus {
+                crate::types::HealthStatus::healthy(1)
+            }
+            fn metrics(&self) -> &crate::metrics::DaemonMetrics {
+                &self.metrics
+            }
         }
 
         let daemon = TestDaemon {

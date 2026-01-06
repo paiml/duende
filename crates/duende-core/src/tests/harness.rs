@@ -96,10 +96,7 @@ impl TestHarness {
     ///
     /// # Errors
     /// Returns an error if the test times out or fails.
-    pub async fn run_with_timeout<F, Fut, T>(
-        &self,
-        test: F,
-    ) -> Result<T, TestError>
+    pub async fn run_with_timeout<F, Fut, T>(&self, test: F) -> Result<T, TestError>
     where
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = Result<T, TestError>>,
@@ -149,9 +146,9 @@ impl TestError {
 macro_rules! assert_test {
     ($cond:expr) => {
         if !$cond {
-            return Err($crate::tests::harness::TestError::assertion(
-                stringify!($cond),
-            ));
+            return Err($crate::tests::harness::TestError::assertion(stringify!(
+                $cond
+            )));
         }
     };
     ($cond:expr, $msg:expr) => {

@@ -1,3 +1,6 @@
+// Iron Lotus: Allow unwrap/expect in tests for clear failure messages
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
+
 //! # duende-mlock
 //!
 //! Memory locking for swap-critical daemons.
@@ -302,10 +305,7 @@ mod tests {
     #[test]
     fn test_lock_with_config_empty_flags() {
         // With no flags, should succeed
-        let config = MlockConfig::builder()
-            .current(false)
-            .future(false)
-            .build();
+        let config = MlockConfig::builder().current(false).future(false).build();
         let result = lock_with_config(config);
         assert!(result.is_ok());
         if let Ok(status) = result {

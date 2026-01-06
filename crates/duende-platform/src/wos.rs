@@ -25,8 +25,8 @@ use crate::{DaemonHandle, Platform, PlatformAdapter, PlatformError, Result, Trac
 use async_trait::async_trait;
 use duende_core::{Daemon, DaemonConfig, DaemonStatus, FailureReason, Signal};
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
 use tokio::sync::RwLock;
 
 /// Global PID counter for unique process IDs (WOS uses 32-bit PIDs).
@@ -464,7 +464,10 @@ mod tests {
         assert_eq!(WosAdapter::config_to_priority(&config), Priority::Low);
 
         config.resources.cpu_quota_percent = 50.0;
-        assert_eq!(WosAdapter::config_to_priority(&config), Priority::AboveNormal);
+        assert_eq!(
+            WosAdapter::config_to_priority(&config),
+            Priority::AboveNormal
+        );
 
         config.resources.cpu_quota_percent = 95.0;
         assert_eq!(WosAdapter::config_to_priority(&config), Priority::RealTime);

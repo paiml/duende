@@ -251,9 +251,7 @@ impl PlatformAdapter for PepitaAdapter {
         }
 
         // VM ID is the name or from stdout
-        let vm_id = String::from_utf8_lossy(&output.stdout)
-            .trim()
-            .to_string();
+        let vm_id = String::from_utf8_lossy(&output.stdout).trim().to_string();
         let id = if vm_id.is_empty() { vm_name } else { vm_id };
 
         Ok(DaemonHandle::pepita(id))
@@ -376,10 +374,7 @@ mod tests {
             .with_kernel("/boot/vmlinux".into())
             .with_rootfs("/images/rootfs.ext4".into());
 
-        assert_eq!(
-            adapter.kernel_path,
-            Some(PathBuf::from("/boot/vmlinux"))
-        );
+        assert_eq!(adapter.kernel_path, Some(PathBuf::from("/boot/vmlinux")));
         assert_eq!(
             adapter.rootfs_path,
             Some(PathBuf::from("/images/rootfs.ext4"))

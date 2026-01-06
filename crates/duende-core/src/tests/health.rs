@@ -5,13 +5,13 @@
 
 use std::time::Duration;
 
+use crate::config::DaemonConfig;
 use crate::config::HealthCheckConfig;
 use crate::daemon::Daemon;
 use crate::error::DaemonError;
 use crate::manager::{DaemonManager, RestartPolicy};
 use crate::tests::mocks::MockDaemon;
 use crate::types::HealthStatus;
-use crate::config::DaemonConfig;
 
 /// F061: Health check default interval is 30s
 #[test]
@@ -39,7 +39,10 @@ fn f062_health_check_default_timeout_10s() {
 #[test]
 fn f063_health_check_default_retries_3() {
     let config = HealthCheckConfig::default();
-    assert_eq!(config.retries, 3, "Default health check retries should be 3");
+    assert_eq!(
+        config.retries, 3,
+        "Default health check retries should be 3"
+    );
 }
 
 /// F064: Health check can be disabled
@@ -51,14 +54,20 @@ fn f064_health_check_can_be_disabled() {
 
     // Default is enabled
     let default_config = HealthCheckConfig::default();
-    assert!(default_config.enabled, "Health check should be enabled by default");
+    assert!(
+        default_config.enabled,
+        "Health check should be enabled by default"
+    );
 }
 
 /// F065: Healthy status returns true
 #[test]
 fn f065_healthy_status_returns_true() {
     let status = HealthStatus::healthy(5);
-    assert!(status.is_healthy(), "healthy() should return is_healthy() == true");
+    assert!(
+        status.is_healthy(),
+        "healthy() should return is_healthy() == true"
+    );
     assert!(status.healthy);
 }
 
@@ -80,7 +89,10 @@ fn f067_health_latency_tracked() {
     assert_eq!(status.latency_ms, 42, "Health latency should be tracked");
 
     let status = HealthStatus::unhealthy("error", 100);
-    assert_eq!(status.latency_ms, 100, "Unhealthy latency should be tracked");
+    assert_eq!(
+        status.latency_ms, 100,
+        "Unhealthy latency should be tracked"
+    );
 }
 
 /// F068: Health check timeout triggers failure (mock behavior)
@@ -90,7 +102,10 @@ async fn f068_health_check_timeout_behavior() {
     let daemon = MockDaemon::new("test").unhealthy();
 
     let health = daemon.health_check().await;
-    assert!(!health.is_healthy(), "Unhealthy daemon should report unhealthy");
+    assert!(
+        !health.is_healthy(),
+        "Unhealthy daemon should report unhealthy"
+    );
 }
 
 /// F069: Retry count affects failure threshold (configuration test)
@@ -119,7 +134,10 @@ async fn f070_manager_updates_health_status() {
 
     // Update health
     let health = HealthStatus::healthy(5);
-    manager.update_health(id, health).await.expect("update should succeed");
+    manager
+        .update_health(id, health)
+        .await
+        .expect("update should succeed");
 
     // Verify updated
     let retrieved = manager
@@ -214,7 +232,10 @@ fn f075_health_timestamp_accurate() {
 #[test]
 fn f076_health_error_is_recoverable() {
     let error = DaemonError::health_check("check failed");
-    assert!(error.is_recoverable(), "HealthCheck error should be recoverable");
+    assert!(
+        error.is_recoverable(),
+        "HealthCheck error should be recoverable"
+    );
 }
 
 /// F077: Failed health triggers restart (configuration test)

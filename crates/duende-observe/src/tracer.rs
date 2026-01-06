@@ -132,7 +132,10 @@ impl DaemonTracer {
             events.push(event);
 
             // Track syscall frequency
-            *self.syscall_counts.entry(syscall_info.name.clone()).or_insert(0) += 1;
+            *self
+                .syscall_counts
+                .entry(syscall_info.name.clone())
+                .or_insert(0) += 1;
             self.sample_count += 1;
 
             // Detect anomalies based on syscall frequency
@@ -142,7 +145,10 @@ impl DaemonTracer {
         }
 
         // Read wait channel for blocking syscalls
-        if let Ok(wchan) = Self::read_wchan(pid) && !wchan.is_empty() && wchan != "0" {
+        if let Ok(wchan) = Self::read_wchan(pid)
+            && !wchan.is_empty()
+            && wchan != "0"
+        {
             let event = TraceEvent {
                 syscall: format!("wchan:{}", wchan),
                 duration_us: 0,
@@ -517,7 +523,12 @@ mod tests {
         let mut tracer = DaemonTracer::new();
         let result = tracer.collect().await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("no daemon attached"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("no daemon attached")
+        );
     }
 
     #[test]
@@ -675,7 +686,9 @@ mod tests {
         fn test_critical_path_limit() {
             let mut tracer = DaemonTracer::new();
             for i in 0..10 {
-                tracer.syscall_counts.insert(format!("syscall_{}", i), i as u64);
+                tracer
+                    .syscall_counts
+                    .insert(format!("syscall_{}", i), i as u64);
             }
 
             let path = tracer.build_critical_path();
@@ -709,9 +722,15 @@ mod tests {
             tracer.syscall_counts.insert("close".to_string(), 5);
 
             let anomaly = tracer.detect_frequency_anomaly("read");
-            assert!(anomaly.is_some(), "Expected anomaly for high frequency syscall");
+            assert!(
+                anomaly.is_some(),
+                "Expected anomaly for high frequency syscall"
+            );
             let anomaly = anomaly.unwrap();
-            assert!(anomaly.z_score > 0.0, "Expected positive z-score for high frequency");
+            assert!(
+                anomaly.z_score > 0.0,
+                "Expected positive z-score for high frequency"
+            );
         }
     }
 

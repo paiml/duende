@@ -153,7 +153,11 @@ fn f088_metrics_clone_shares_state() {
     assert_eq!(metrics2.requests_total(), 1, "Clone should share state");
 
     metrics2.record_request();
-    assert_eq!(metrics1.requests_total(), 2, "Original should see clone's updates");
+    assert_eq!(
+        metrics1.requests_total(),
+        2,
+        "Original should see clone's updates"
+    );
 }
 
 /// F089: Snapshot captures all metrics
@@ -237,10 +241,16 @@ async fn f093_tracer_attaches() {
     let adapter = NativeAdapter::new();
     let daemon = MockDaemon::new("test");
 
-    let handle = adapter.spawn(Box::new(daemon)).await.expect("spawn should succeed");
+    let handle = adapter
+        .spawn(Box::new(daemon))
+        .await
+        .expect("spawn should succeed");
 
     // Attach tracer
-    let tracer = adapter.attach_tracer(&handle).await.expect("attach should succeed");
+    let tracer = adapter
+        .attach_tracer(&handle)
+        .await
+        .expect("attach should succeed");
 
     // Verify tracer handle is valid
     assert!(!tracer.daemon_id().as_uuid().is_nil());
@@ -254,8 +264,14 @@ async fn f094_tracer_type_correct() {
     let adapter = NativeAdapter::new();
     let daemon = MockDaemon::new("test");
 
-    let handle = adapter.spawn(Box::new(daemon)).await.expect("spawn should succeed");
-    let tracer = adapter.attach_tracer(&handle).await.expect("attach should succeed");
+    let handle = adapter
+        .spawn(Box::new(daemon))
+        .await
+        .expect("spawn should succeed");
+    let tracer = adapter
+        .attach_tracer(&handle)
+        .await
+        .expect("attach should succeed");
 
     // Native adapter uses Ptrace on Unix
     assert_eq!(tracer.tracer_type(), TracerType::Ptrace);
@@ -268,8 +284,14 @@ async fn f095_tracer_tracks_daemon() {
     let daemon = MockDaemon::new("test");
     let expected_id = daemon.id();
 
-    let handle = adapter.spawn(Box::new(daemon)).await.expect("spawn should succeed");
-    let tracer = adapter.attach_tracer(&handle).await.expect("attach should succeed");
+    let handle = adapter
+        .spawn(Box::new(daemon))
+        .await
+        .expect("spawn should succeed");
+    let tracer = adapter
+        .attach_tracer(&handle)
+        .await
+        .expect("attach should succeed");
 
     assert_eq!(tracer.daemon_id(), expected_id);
 }
@@ -283,7 +305,10 @@ async fn f096_tracer_fails_unknown() {
     let unknown_handle = DaemonHandle::native(DaemonId::new(), 99999);
 
     let result = adapter.attach_tracer(&unknown_handle).await;
-    assert!(result.is_err(), "attach_tracer should fail for unknown daemon");
+    assert!(
+        result.is_err(),
+        "attach_tracer should fail for unknown daemon"
+    );
 }
 
 /// F097: Logging includes daemon ID (mock test)

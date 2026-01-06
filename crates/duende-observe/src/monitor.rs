@@ -172,12 +172,16 @@ impl DaemonMonitor {
             if line.starts_with("MemTotal:") {
                 // Format: "MemTotal:       16384000 kB"
                 let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() >= 2 && let Ok(kb) = parts[1].parse::<u64>() {
+                if parts.len() >= 2
+                    && let Ok(kb) = parts[1].parse::<u64>()
+                {
                     return Ok(kb * 1024); // Convert kB to bytes
                 }
             }
         }
-        Err(ObserveError::monitor("failed to parse MemTotal from /proc/meminfo"))
+        Err(ObserveError::monitor(
+            "failed to parse MemTotal from /proc/meminfo",
+        ))
     }
 
     /// Parse /proc/{pid}/stat for CPU and process info.
@@ -544,18 +548,43 @@ mod tests {
         #[test]
         fn test_parse_stat_all_states() {
             let test_cases = [
-                ("1 (t) R 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 0 0 0 0 0", ProcessState::Running),
-                ("1 (t) S 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 0 0 0 0 0", ProcessState::Sleeping),
-                ("1 (t) D 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 0 0 0 0 0", ProcessState::DiskWait),
-                ("1 (t) Z 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 0 0 0 0 0", ProcessState::Zombie),
-                ("1 (t) T 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 0 0 0 0 0", ProcessState::Stopped),
-                ("1 (t) t 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 0 0 0 0 0", ProcessState::Stopped),
-                ("1 (t) X 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 0 0 0 0 0", ProcessState::Unknown),
+                (
+                    "1 (t) R 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 0 0 0 0 0",
+                    ProcessState::Running,
+                ),
+                (
+                    "1 (t) S 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 0 0 0 0 0",
+                    ProcessState::Sleeping,
+                ),
+                (
+                    "1 (t) D 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 0 0 0 0 0",
+                    ProcessState::DiskWait,
+                ),
+                (
+                    "1 (t) Z 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 0 0 0 0 0",
+                    ProcessState::Zombie,
+                ),
+                (
+                    "1 (t) T 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 0 0 0 0 0",
+                    ProcessState::Stopped,
+                ),
+                (
+                    "1 (t) t 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 0 0 0 0 0",
+                    ProcessState::Stopped,
+                ),
+                (
+                    "1 (t) X 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 0 0 0 0 0",
+                    ProcessState::Unknown,
+                ),
             ];
 
             for (content, expected_state) in test_cases {
                 let stat = DaemonMonitor::parse_stat_content(content).unwrap();
-                assert_eq!(stat.state, expected_state, "Failed for content: {}", content);
+                assert_eq!(
+                    stat.state, expected_state,
+                    "Failed for content: {}",
+                    content
+                );
             }
         }
 
@@ -746,10 +775,7 @@ mod tests {
             let pid = std::process::id();
             let snapshot = monitor.collect(pid).unwrap();
 
-            assert_eq!(
-                snapshot.pid, pid,
-                "Snapshot PID should match requested PID"
-            );
+            assert_eq!(snapshot.pid, pid, "Snapshot PID should match requested PID");
         }
 
         /// F008: Falsify memory percent calculation

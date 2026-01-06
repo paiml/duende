@@ -144,11 +144,7 @@ impl FalsificationTest {
 
 impl fmt::Display for FalsificationTest {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "[{}] {} - {}",
-            self.id, self.category, self.description
-        )
+        write!(f, "[{}] {} - {}", self.id, self.category, self.description)
     }
 }
 

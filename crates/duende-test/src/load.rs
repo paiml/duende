@@ -121,7 +121,10 @@ impl LoadMetrics {
     }
 
     fn get_latencies(&self) -> Vec<u64> {
-        self.latencies_us.lock().map(|l| l.clone()).unwrap_or_default()
+        self.latencies_us
+            .lock()
+            .map(|l| l.clone())
+            .unwrap_or_default()
     }
 }
 
@@ -179,7 +182,8 @@ impl LoadTester {
         // Spawn concurrent workers
         let mut handles = Vec::with_capacity(self.config.concurrent_users as usize);
         let ramp_delay = if self.config.concurrent_users > 1 {
-            self.config.ramp_up.as_millis() as u64 / (u64::from(self.config.concurrent_users) - 1).max(1)
+            self.config.ramp_up.as_millis() as u64
+                / (u64::from(self.config.concurrent_users) - 1).max(1)
         } else {
             0
         };
@@ -201,9 +205,8 @@ impl LoadTester {
                 tokio::time::sleep(worker_start_delay).await;
 
                 let mut request_id = 0u64;
-                let interval = target_rps.map(|rps| {
-                    Duration::from_secs_f64(1.0 / rps * f64::from(concurrent_users))
-                });
+                let interval = target_rps
+                    .map(|rps| Duration::from_secs_f64(1.0 / rps * f64::from(concurrent_users)));
 
                 loop {
                     // Check termination conditions

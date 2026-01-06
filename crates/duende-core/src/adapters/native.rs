@@ -345,10 +345,7 @@ mod tests {
         let handle = adapter.spawn(Box::new(daemon)).await.unwrap();
 
         // Graceful stop with timeout
-        adapter
-            .stop(&handle, Duration::from_secs(5))
-            .await
-            .unwrap();
+        adapter.stop(&handle, Duration::from_secs(5)).await.unwrap();
 
         // Should be stopped
         let status = adapter.status(&handle).await.unwrap();

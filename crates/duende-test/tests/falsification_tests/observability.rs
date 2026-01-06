@@ -91,10 +91,7 @@ async fn f044_collect_returns_report() {
     assert!(report.is_some(), "F044 FALSIFIED: No report returned");
 
     let report = report.unwrap();
-    assert_eq!(
-        report.pid, pid,
-        "F044 FALSIFIED: Report PID doesn't match"
-    );
+    assert_eq!(report.pid, pid, "F044 FALSIFIED: Report PID doesn't match");
 }
 
 /// F045: TraceReport has expected structure
@@ -179,10 +176,7 @@ fn f048_f051_monitor_collection() {
     assert!(snapshot.is_some(), "F048 FALSIFIED: No snapshot returned");
 
     let snapshot = snapshot.unwrap();
-    assert_eq!(
-        snapshot.pid, pid,
-        "F048 FALSIFIED: Snapshot PID incorrect"
-    );
+    assert_eq!(snapshot.pid, pid, "F048 FALSIFIED: Snapshot PID incorrect");
 }
 
 // =============================================================================

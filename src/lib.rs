@@ -1,3 +1,6 @@
+// Iron Lotus: Allow unwrap/expect in tests for clear failure messages
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
+
 //! Duende: Cross-Platform Daemon Tooling Framework
 //!
 //! Part of the PAIML Sovereign AI Stack.
@@ -21,7 +24,6 @@ pub mod prelude {
         HealthStatus, Signal,
     };
     pub use duende_platform::{
-        is_memory_locked, lock_daemon_memory, DaemonHandle, MlockResult, Platform,
-        PlatformAdapter,
+        DaemonHandle, MlockResult, Platform, PlatformAdapter, is_memory_locked, lock_daemon_memory,
     };
 }

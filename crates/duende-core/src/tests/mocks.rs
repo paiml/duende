@@ -2,8 +2,8 @@
 //!
 //! Provides configurable mock daemons for falsification tests.
 
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -121,7 +121,9 @@ impl MockDaemon {
     /// Configures shutdown to fail with the given message.
     #[must_use]
     pub fn fail_shutdown(self, msg: impl Into<String>) -> Self {
-        self.state.shutdown_should_fail.store(true, Ordering::SeqCst);
+        self.state
+            .shutdown_should_fail
+            .store(true, Ordering::SeqCst);
         *self.state.shutdown_error_msg.write() = msg.into();
         self
     }
@@ -129,7 +131,9 @@ impl MockDaemon {
     /// Configures run to exit after N iterations.
     #[must_use]
     pub fn exit_after(self, iterations: u32) -> Self {
-        self.state.run_iterations.store(iterations, Ordering::SeqCst);
+        self.state
+            .run_iterations
+            .store(iterations, Ordering::SeqCst);
         self
     }
 

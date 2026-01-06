@@ -256,7 +256,11 @@ mod tests {
         let result = gate.check(&evidence);
         assert!(!result.passed());
 
-        if let JidokaResult::Stop { violations, recommendation } = result {
+        if let JidokaResult::Stop {
+            violations,
+            recommendation,
+        } = result
+        {
             assert_eq!(violations.len(), 1);
             assert!(!recommendation.is_empty());
         } else {
@@ -405,7 +409,11 @@ mod tests {
             }];
 
             let recommendation = gate.recommend(&violations);
-            assert!(!recommendation.is_empty(), "Should have recommendation for {:?}", kind);
+            assert!(
+                !recommendation.is_empty(),
+                "Should have recommendation for {:?}",
+                kind
+            );
         }
     }
 

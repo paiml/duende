@@ -53,7 +53,12 @@ async fn f002_init_failure_prevents_run() {
     // The daemon should never reach run() in production
     // (The manager would not proceed after init failure)
     // This test verifies init properly returns error
-    assert!(result.unwrap_err().to_string().contains("configuration error"));
+    assert!(
+        result
+            .unwrap_err()
+            .to_string()
+            .contains("configuration error")
+    );
 }
 
 /// F003: Shutdown is called after run completes
@@ -194,7 +199,10 @@ async fn f009_graceful_shutdown_within_timeout() {
     let timeout = Duration::from_secs(5);
 
     let start = std::time::Instant::now();
-    daemon.shutdown(timeout).await.expect("shutdown should succeed");
+    daemon
+        .shutdown(timeout)
+        .await
+        .expect("shutdown should succeed");
     let elapsed = start.elapsed();
 
     // Shutdown should complete well before the timeout
@@ -204,13 +212,16 @@ async fn f009_graceful_shutdown_within_timeout() {
 /// F010: Forced kill terminates immediately
 #[tokio::test]
 async fn f010_forced_kill_terminates_immediately() {
-    use crate::adapters::NativeAdapter;
     use crate::adapter::PlatformAdapter;
+    use crate::adapters::NativeAdapter;
 
     let adapter = NativeAdapter::new();
     let daemon = MockDaemon::new("test");
 
-    let handle = adapter.spawn(Box::new(daemon)).await.expect("spawn should succeed");
+    let handle = adapter
+        .spawn(Box::new(daemon))
+        .await
+        .expect("spawn should succeed");
 
     // Kill immediately
     let start = std::time::Instant::now();

@@ -97,7 +97,9 @@ fn main() -> ExitCode {
     println!();
 
     if failed > 0 {
-        println!("\x1b[33m[WARN]\x1b[0m Some tests failed - this may be expected depending on Docker configuration");
+        println!(
+            "\x1b[33m[WARN]\x1b[0m Some tests failed - this may be expected depending on Docker configuration"
+        );
         println!();
         println!("For production trueno-ublk containers, use:");
         println!("  docker run --cap-add=IPC_LOCK --ulimit memlock=-1:-1 ...");
