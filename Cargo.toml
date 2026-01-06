@@ -7,6 +7,7 @@ members = [
     "crates/duende-observe",
     "crates/duende-policy",
     "crates/duende-test",
+    "crates/duende-ublk",
 ]
 
 [package]
@@ -88,6 +89,7 @@ duende-platform = { version = "0.1", path = "crates/duende-platform" }
 duende-observe = { version = "0.1", path = "crates/duende-observe" }
 duende-policy = { version = "0.1", path = "crates/duende-policy" }
 duende-test = { version = "0.1", path = "crates/duende-test" }
+duende-ublk = { version = "0.1", path = "crates/duende-ublk" }
 
 # Utilities
 humantime = "2.1"

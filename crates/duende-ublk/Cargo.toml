@@ -1,0 +1,35 @@
+[package]
+name = "duende-ublk"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+authors = ["PAIML <contact@paiml.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/paiml/duende"
+documentation = "https://docs.rs/duende-ublk"
+description = "ublk device lifecycle management for swap-critical daemons"
+keywords = ["ublk", "block-device", "io-uring", "daemon", "cleanup"]
+categories = ["os", "filesystem"]
+readme = "README.md"
+
+[features]
+default = []
+
+[dependencies]
+# io_uring for URING_CMD (ublk control interface requires this)
+io-uring = "0.7"
+# libc for mmap, ioctl types
+libc = "0.2"
+# Error handling
+thiserror = "2.0"
+
+[dev-dependencies]
+# Property-based testing
+proptest = "1.5"
+
+[[example]]
+name = "cleanup"
+path = "examples/cleanup.rs"
+
+[lints]
+workspace = true
