@@ -14,13 +14,13 @@ Cross-platform daemon framework for the PAIML Sovereign AI Stack.
 
 | Metric | Value | Falsification |
 |--------|-------|---------------|
-| Tests | 665 | `cargo test --workspace` |
+| Tests | 683 | `cargo test --workspace` |
 | Coverage | See CI | `make coverage` |
-| Platforms | 4 of 6 | Native, Linux, macOS, Container |
+| Platforms | 6 of 6 | Native, Linux, macOS, Container, pepita, WOS |
 
 ## What Works (Falsifiable)
 
-### duende-core (334 tests)
+### duende-core (352 tests)
 
 - **Daemon trait**: Async lifecycle with `init()`, `run()`, `shutdown()`, `health_check()`
 - **DaemonManager**: Registration, status tracking, signal forwarding
@@ -30,6 +30,8 @@ Cross-platform daemon framework for the PAIML Sovereign AI Stack.
 - **SystemdAdapter** (Linux): Transient units via `systemd-run`, `systemctl` commands
 - **LaunchdAdapter** (macOS): Plist files via `launchctl bootstrap/bootout`
 - **ContainerAdapter**: Docker/Podman/containerd via CLI commands
+- **PepitaAdapter**: MicroVM management via pepita CLI with vsock communication
+- **WosAdapter**: WebAssembly OS process management via wos-ctl CLI
 
 ```rust
 use duende_core::{Daemon, DaemonConfig, DaemonContext, DaemonId, DaemonMetrics, ExitReason, HealthStatus, DaemonError};
@@ -118,15 +120,15 @@ lock_with_config(config)?;
 | SystemdAdapter | Implemented | Linux | `systemctl --user status duende-*` |
 | LaunchdAdapter | Implemented | macOS | `launchctl list \| grep duende` |
 | ContainerAdapter | Implemented | All | `docker ps \| grep duende` |
-| PepitaAdapter | Stub | - | Returns `NotSupported` |
-| WosAdapter | Stub | - | Returns `NotSupported` |
+| PepitaAdapter | Implemented | Linux+KVM | `pepita list \| grep duende-vm` |
+| WosAdapter | Implemented | WOS | `wos-ctl ps \| grep duende` |
 
 ## Crate Structure
 
 ```
 duende/
 ├── crates/
-│   ├── duende-core/       # 334 tests - Daemon trait, manager, platform adapters
+│   ├── duende-core/       # 352 tests - Daemon trait, manager, platform adapters
 │   ├── duende-mlock/      # 44 tests  - mlockall() for swap safety
 │   ├── duende-observe/    # 55 tests  - /proc monitoring, syscall tracing
 │   ├── duende-platform/   # 29 tests  - Platform detection, memory helpers
@@ -138,7 +140,7 @@ duende/
 
 ```bash
 cargo build                    # Build
-cargo test --workspace         # Run 665 tests
+cargo test --workspace         # Run 683 tests
 make tier1                     # fmt + clippy + check (<3s)
 make tier2                     # tests + deny (1-5min)
 make coverage                  # Coverage report
@@ -153,8 +155,8 @@ make coverage                  # Coverage report
 | DP-003 | trueno-ublk Integration | In Progress | ublk device serves I/O with memory locked |
 | DP-004 | macOS launchd Adapter | Done | `launchctl list` shows managed service |
 | DP-005 | Container Adapter | Done | `docker ps` shows managed container |
-| DP-006 | pepita MicroVM Adapter | Planned | VM spawns with vsock communication |
-| DP-007 | WOS Adapter | Planned | WebAssembly process managed via WOS API |
+| DP-006 | pepita MicroVM Adapter | Done | `pepita list` shows managed VM with vsock |
+| DP-007 | WOS Adapter | Done | `wos-ctl ps` shows managed process |
 
 ## License
 

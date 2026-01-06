@@ -17,6 +17,8 @@ mod systemd;
 #[cfg(target_os = "macos")]
 mod launchd;
 mod container;
+mod pepita;
+mod wos;
 
 pub use native::NativeAdapter;
 #[cfg(target_os = "linux")]
@@ -24,6 +26,8 @@ pub use systemd::SystemdAdapter as SystemdAdapterImpl;
 #[cfg(target_os = "macos")]
 pub use launchd::{LaunchdAdapter as LaunchdAdapterImpl, LaunchdDomain};
 pub use container::{ContainerAdapter, ContainerRuntime};
+pub use pepita::PepitaAdapter;
+pub use wos::WosAdapter;
 
 // Platform-specific adapters (stubs for now)
 
@@ -192,126 +196,14 @@ pub use launchd_stub::LaunchdAdapter;
 // ContainerAdapter and ContainerRuntime are now exported from container.rs
 
 // =============================================================================
-// PepitaAdapter (MicroVM)
+// PepitaAdapter (MicroVM) - Implemented in pepita.rs
 // =============================================================================
-
-/// pepita MicroVM adapter stub.
-///
-/// This adapter returns `NotSupported` for all operations.
-/// Full pepita integration is tracked in roadmap.yaml (DP-006).
-pub struct PepitaAdapter {
-    _vsock_base_port: u32,
-}
-
-impl PepitaAdapter {
-    /// Creates a new pepita adapter.
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            _vsock_base_port: 5000,
-        }
-    }
-
-    /// Creates a pepita adapter with custom vsock base port.
-    #[must_use]
-    pub const fn with_vsock_port(vsock_base_port: u32) -> Self {
-        Self {
-            _vsock_base_port: vsock_base_port,
-        }
-    }
-}
-
-impl Default for PepitaAdapter {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[async_trait]
-impl PlatformAdapter for PepitaAdapter {
-    fn platform(&self) -> Platform {
-        Platform::PepitaMicroVM
-    }
-
-    async fn spawn(&self, _daemon: Box<dyn Daemon>) -> PlatformResult<DaemonHandle> {
-        Err(PlatformError::not_supported(
-            Platform::PepitaMicroVM,
-            "spawn",
-        ))
-    }
-
-    async fn signal(&self, _handle: &DaemonHandle, _sig: Signal) -> PlatformResult<()> {
-        Err(PlatformError::not_supported(
-            Platform::PepitaMicroVM,
-            "signal",
-        ))
-    }
-
-    async fn status(&self, _handle: &DaemonHandle) -> PlatformResult<DaemonStatus> {
-        Err(PlatformError::not_supported(
-            Platform::PepitaMicroVM,
-            "status",
-        ))
-    }
-
-    async fn attach_tracer(&self, _handle: &DaemonHandle) -> PlatformResult<TracerHandle> {
-        Err(PlatformError::not_supported(
-            Platform::PepitaMicroVM,
-            "attach_tracer",
-        ))
-    }
-}
+// PepitaAdapter is now exported from pepita.rs
 
 // =============================================================================
-// WosAdapter (WebAssembly OS)
+// WosAdapter (WebAssembly OS) - Implemented in wos.rs
 // =============================================================================
-
-/// WOS (WebAssembly Operating System) adapter stub.
-///
-/// This adapter returns `NotSupported` for all operations.
-/// Full WOS integration is tracked in roadmap.yaml (DP-007).
-pub struct WosAdapter {
-    _priority_default: u8,
-}
-
-impl WosAdapter {
-    /// Creates a new WOS adapter.
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            _priority_default: 4, // Normal priority (0-7 scale)
-        }
-    }
-}
-
-impl Default for WosAdapter {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[async_trait]
-impl PlatformAdapter for WosAdapter {
-    fn platform(&self) -> Platform {
-        Platform::Wos
-    }
-
-    async fn spawn(&self, _daemon: Box<dyn Daemon>) -> PlatformResult<DaemonHandle> {
-        Err(PlatformError::not_supported(Platform::Wos, "spawn"))
-    }
-
-    async fn signal(&self, _handle: &DaemonHandle, _sig: Signal) -> PlatformResult<()> {
-        Err(PlatformError::not_supported(Platform::Wos, "signal"))
-    }
-
-    async fn status(&self, _handle: &DaemonHandle) -> PlatformResult<DaemonStatus> {
-        Err(PlatformError::not_supported(Platform::Wos, "status"))
-    }
-
-    async fn attach_tracer(&self, _handle: &DaemonHandle) -> PlatformResult<TracerHandle> {
-        Err(PlatformError::not_supported(Platform::Wos, "attach_tracer"))
-    }
-}
+// WosAdapter is now exported from wos.rs
 
 // =============================================================================
 // select_adapter - Factory function
@@ -446,19 +338,19 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_wos_adapter_not_supported() {
+    async fn test_wos_adapter_operations_not_stub() {
+        // WosAdapter is now a real implementation, not a stub
         let adapter = WosAdapter::new();
         let handle = DaemonHandle::wos(DaemonId::new(), 1);
 
-        // All operations should return NotSupported
-        let result = adapter.signal(&handle, Signal::Term).await;
-        assert!(result.unwrap_err().is_not_supported());
+        // These may fail (WOS not available) but should not return NotSupported
+        if let Err(e) = adapter.signal(&handle, Signal::Term).await {
+            assert!(!e.is_not_supported(), "signal should not return NotSupported");
+        }
 
-        let result = adapter.status(&handle).await;
-        assert!(result.unwrap_err().is_not_supported());
-
-        let result = adapter.attach_tracer(&handle).await;
-        assert!(result.unwrap_err().is_not_supported());
+        // status may succeed or fail based on environment
+        let status_result = adapter.status(&handle).await;
+        assert!(status_result.is_ok() || !status_result.unwrap_err().is_not_supported());
     }
 
     // =========================================================================
@@ -466,18 +358,19 @@ mod tests {
     // =========================================================================
 
     #[tokio::test]
-    async fn test_pepita_adapter_not_supported() {
+    async fn test_pepita_adapter_operations_not_stub() {
+        // PepitaAdapter is now a real implementation, not a stub
         let adapter = PepitaAdapter::new();
         let handle = DaemonHandle::pepita(DaemonId::new(), "vm-test", 1);
 
-        let result = adapter.signal(&handle, Signal::Term).await;
-        assert!(result.unwrap_err().is_not_supported());
+        // These may fail (pepita not installed, no KVM) but should not return NotSupported
+        if let Err(e) = adapter.signal(&handle, Signal::Term).await {
+            assert!(!e.is_not_supported(), "signal should not return NotSupported");
+        }
 
-        let result = adapter.status(&handle).await;
-        assert!(result.unwrap_err().is_not_supported());
-
-        let result = adapter.attach_tracer(&handle).await;
-        assert!(result.unwrap_err().is_not_supported());
+        // status returns Stopped for non-existent VMs
+        let status_result = adapter.status(&handle).await;
+        assert!(status_result.is_ok() || !status_result.unwrap_err().is_not_supported());
     }
 
     // =========================================================================

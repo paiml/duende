@@ -5,7 +5,7 @@
 
 use crate::adapter::{DaemonHandle, PlatformAdapter};
 use crate::adapters::{
-    select_adapter, ContainerAdapter, LaunchdAdapter, NativeAdapter,
+    select_adapter, LaunchdAdapter, NativeAdapter,
     PepitaAdapter, SystemdAdapter, WosAdapter,
 };
 use crate::platform::{detect_platform, Platform};
@@ -129,15 +129,13 @@ async fn f107_stub_adapters_not_supported() {
     // - SystemdAdapter: real on Linux, stub on other platforms
     // - LaunchdAdapter: real on macOS, stub on other platforms
     // - ContainerAdapter: real implementation (uses docker/podman CLI)
+    // - PepitaAdapter: real implementation (requires KVM + pepita)
+    // - WosAdapter: real implementation (requires WOS runtime)
     let adapters: Vec<Box<dyn PlatformAdapter>> = vec![
         #[cfg(not(target_os = "linux"))]
         Box::new(SystemdAdapter::new()),
         #[cfg(not(target_os = "macos"))]
         Box::new(LaunchdAdapter::new()),
-        // ContainerAdapter is now a real implementation, not a stub
-        // PepitaAdapter and WosAdapter are still stubs
-        Box::new(PepitaAdapter::new()),
-        Box::new(WosAdapter::new()),
     ];
 
     for adapter in adapters {
