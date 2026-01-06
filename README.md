@@ -8,47 +8,28 @@
   <img src="assets/hero.svg" alt="Duende - Cross-Platform Daemon Orchestration" width="800">
 </p>
 
-Cross-platform daemon tooling framework for the **PAIML Sovereign AI Stack**.
+Cross-platform daemon framework for the PAIML Sovereign AI Stack.
 
-## Overview
+## Status
 
-Duende (Spanish: spirit/daemon) provides unified lifecycle management, observability, and policy enforcement for long-running processes across multiple platforms.
+| Metric | Value | Falsification |
+|--------|-------|---------------|
+| Tests | 527 | `cargo test --workspace` |
+| Coverage | See CI | `make coverage` |
+| Platforms | 1 of 6 | NativeAdapter only |
 
-## Features
+## What Works (Falsifiable)
 
-- **Daemon Trait**: Standard lifecycle with `init()`, `run()`, `shutdown()`, `health_check()`
-- **DaemonManager**: Orchestration with auto-restart and exponential backoff
-- **Platform Adapters**: Linux (systemd), macOS (launchd), Container, pepita, WOS
-- **Toyota Way Principles**: Jidoka, Heijunka, Poka-Yoke, Standardized Work
-- **Memory Locking**: `mlock()` support for swap device daemons (critical for trueno-ublk)
+### duende-core (309 tests)
 
-## Platform Support
-
-| Platform | Adapter | Status |
-|----------|---------|--------|
-| Linux (systemd) | `LinuxAdapter` | Stub (DP-002) |
-| macOS (launchd) | `MacosAdapter` | Stub (DP-004) |
-| Container (Docker/OCI) | `ContainerAdapter` | Stub (DP-005) |
-| pepita MicroVM | `PepitaAdapter` | Stub (DP-006) |
-| WOS (WebAssembly OS) | `WosAdapter` | Stub (DP-007) |
-| Native Process | `NativeAdapter` | Implemented |
-
-## Crate Structure
-
-```
-duende/
-├── crates/
-│   ├── duende-core/       # Daemon trait, config, manager, metrics
-│   ├── duende-platform/   # Platform adapters (systemd, launchd, etc.)
-│   ├── duende-observe/    # Observability (renacer, ttop integration)
-│   ├── duende-policy/     # Policy enforcement (Jidoka gates, circuit breakers)
-│   └── duende-test/       # Testing infrastructure (chaos, load testing)
-```
-
-## Quick Start
+- **Daemon trait**: Async lifecycle with `init()`, `run()`, `shutdown()`, `health_check()`
+- **DaemonManager**: Registration, status tracking, signal forwarding
+- **RestartPolicy**: `Never`, `Always`, `OnFailure` with max retries
+- **BackoffConfig**: Exponential backoff (1s initial, 2x multiplier, 60s max)
+- **NativeAdapter**: Process spawning via `tokio::process`, signal delivery
 
 ```rust
-use duende_core::{Daemon, DaemonConfig, DaemonContext, DaemonId, DaemonMetrics, ExitReason, HealthStatus};
+use duende_core::{Daemon, DaemonConfig, DaemonContext, DaemonId, DaemonMetrics, ExitReason, HealthStatus, DaemonError};
 use async_trait::async_trait;
 use std::time::Duration;
 
@@ -68,7 +49,6 @@ impl Daemon for MyDaemon {
 
     async fn run(&mut self, ctx: &mut DaemonContext) -> Result<ExitReason, DaemonError> {
         while !ctx.should_shutdown() {
-            // Do work...
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
         Ok(ExitReason::Graceful)
@@ -88,65 +68,85 @@ impl Daemon for MyDaemon {
 }
 ```
 
-## Memory Locking (Swap Device Safety)
+### duende-mlock (44 tests)
 
-For daemons that serve as swap device backends (like trueno-ublk), memory locking is critical to prevent deadlocks:
+Memory locking for swap-critical daemons. Prevents deadlock when daemon is swap backend.
 
-```toml
-[resources]
-lock_memory = true           # Pin daemon memory via mlockall()
-lock_memory_required = true  # Fail if mlock() fails (recommended for swap daemons)
+```rust
+use duende_mlock::{lock_all, MlockConfig, lock_with_config};
+
+// Lock all current and future allocations
+let status = lock_all()?;
+assert!(status.is_locked());
+
+// Or with config for non-critical contexts
+let config = MlockConfig::builder()
+    .current(true)
+    .future(true)
+    .required(false)  // Don't fail if mlock fails
+    .build();
+lock_with_config(config)?;
 ```
 
-See DP-001 in the roadmap for implementation details.
+**Requires**: `CAP_IPC_LOCK` or `--cap-add=IPC_LOCK --ulimit memlock=-1:-1`
+
+### duende-observe (55 tests)
+
+- **Monitor**: Process metrics via `/proc/[pid]/stat` (Linux)
+- **Tracer**: Syscall statistics, anti-pattern detection, anomaly detection
+
+### duende-policy (45 tests)
+
+- **CircuitBreaker**: Opens after N failures, resets on success
+- **JidokaGate**: Stop-on-first-failure quality checks
+- **ResourceLimiter**: cgroups v2 integration (Linux)
+
+### duende-test (45 tests)
+
+- **TestHarness**: Timeout-based async test runner
+- **ChaosInjector**: Latency and error injection
+- **MockDaemon**: Configurable test doubles
+
+## What Does NOT Work (Stubs)
+
+| Adapter | Status | Ticket |
+|---------|--------|--------|
+| SystemdAdapter | Returns `NotSupported` | DP-002 |
+| LaunchdAdapter | Returns `NotSupported` | DP-004 |
+| ContainerAdapter | Returns `NotSupported` | DP-005 |
+| PepitaAdapter | Returns `NotSupported` | DP-006 |
+| WosAdapter | Returns `NotSupported` | DP-007 |
+
+## Crate Structure
+
+```
+duende/
+├── crates/
+│   ├── duende-core/       # 309 tests - Daemon trait, manager, native adapter
+│   ├── duende-mlock/      # 44 tests  - mlockall() for swap safety
+│   ├── duende-observe/    # 55 tests  - /proc monitoring, syscall tracing
+│   ├── duende-platform/   # 29 tests  - Platform detection, memory helpers
+│   ├── duende-policy/     # 45 tests  - Circuit breaker, jidoka, cgroups
+│   └── duende-test/       # 45 tests  - Harness, chaos, mocks
+```
 
 ## Development
 
 ```bash
-# Build
-cargo build
-
-# Test
-make tier1   # On-save: fmt, clippy, check (<3s)
-make tier2   # Pre-commit: tests, coverage (1-5min)
-make tier3   # Pre-merge: mutants, falsification (1-6h)
-
-# Individual commands
-cargo test --workspace
-make coverage
-make mutants-fast
+cargo build                    # Build
+cargo test --workspace         # Run 527 tests
+make tier1                     # fmt + clippy + check (<3s)
+make tier2                     # tests + deny (1-5min)
+make coverage                  # Coverage report
 ```
 
 ## Roadmap
 
-See `docs/roadmaps/roadmap.yaml` for the full roadmap:
-
-| ID | Title | Priority | Status |
-|----|-------|----------|--------|
-| DP-001 | mlock() Memory Locking | Critical | In Progress |
-| DP-002 | Linux systemd Adapter | High | Planned |
-| DP-003 | trueno-ublk Integration | High | Planned |
-| DP-004 | macOS launchd Adapter | Medium | Planned |
-| DP-005 | Container Adapter | Medium | Planned |
-| DP-006 | pepita MicroVM Adapter | Low | Planned |
-| DP-007 | WOS Adapter | Low | Planned |
-
-## PAIML Stack Integration
-
-Duende integrates with the PAIML Sovereign AI Stack:
-
-| Component | Integration |
-|-----------|-------------|
-| trueno | SIMD/GPU primitives |
-| trueno-viz (ttop) | Real-time monitoring |
-| trueno-zram | Compressed state storage |
-| renacer | Syscall tracing |
-| repartir | Work-stealing scheduler |
-| pacha | State registry |
-
-## Specification
-
-Full specification: `docs/specifications/daemon-tools-spec.md`
+| ID | Title | Priority | Falsification Criteria |
+|----|-------|----------|------------------------|
+| DP-001 | mlock() Memory Locking | Critical | `duende_mlock::lock_all()` returns `Ok(Locked{..})` |
+| DP-002 | Linux systemd Adapter | High | `systemctl status` shows managed unit |
+| DP-003 | trueno-ublk Integration | High | ublk device serves I/O with memory locked |
 
 ## License
 
