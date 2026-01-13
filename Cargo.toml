@@ -43,7 +43,7 @@ path = "examples/mlock.rs"
 workspace = true
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 authors = ["PAIML <team@paiml.com>"]
 license = "MIT"
@@ -83,13 +83,13 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # ═══════════════════════════════════════════════════════════════════════════════
 # Internal workspace crates
 # ═══════════════════════════════════════════════════════════════════════════════
-duende-core = { version = "0.1", path = "crates/duende-core" }
+duende-core = { version = "0.2", path = "crates/duende-core" }
 duende-mlock = { version = "1.0", path = "crates/duende-mlock" }
-duende-platform = { version = "0.1", path = "crates/duende-platform" }
-duende-observe = { version = "0.1", path = "crates/duende-observe" }
-duende-policy = { version = "0.1", path = "crates/duende-policy" }
-duende-test = { version = "0.1", path = "crates/duende-test" }
-duende-ublk = { version = "0.1", path = "crates/duende-ublk" }
+duende-platform = { version = "0.2", path = "crates/duende-platform" }
+duende-observe = { version = "0.2", path = "crates/duende-observe" }
+duende-policy = { version = "0.2", path = "crates/duende-policy" }
+duende-test = { version = "0.2", path = "crates/duende-test" }
+duende-ublk = { version = "0.2", path = "crates/duende-ublk" }
 
 # Utilities
 humantime = "2.1"
