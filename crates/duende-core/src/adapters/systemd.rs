@@ -424,10 +424,7 @@ mod tests {
     #[test]
     fn test_unit_name_special_characters() {
         // Test various daemon names
-        assert_eq!(
-            SystemdAdapter::unit_name("test"),
-            "duende-test.service"
-        );
+        assert_eq!(SystemdAdapter::unit_name("test"), "duende-test.service");
         assert_eq!(
             SystemdAdapter::unit_name("test-daemon"),
             "duende-test-daemon.service"
@@ -436,10 +433,7 @@ mod tests {
             SystemdAdapter::unit_name("test daemon name"),
             "duende-test-daemon-name.service"
         );
-        assert_eq!(
-            SystemdAdapter::unit_name(""),
-            "duende-.service"
-        );
+        assert_eq!(SystemdAdapter::unit_name(""), "duende-.service");
     }
 
     #[test]
@@ -463,10 +457,7 @@ mod tests {
 
     #[test]
     fn test_parse_status_empty() {
-        assert_eq!(
-            SystemdAdapter::parse_status("", 4),
-            DaemonStatus::Stopped
-        );
+        assert_eq!(SystemdAdapter::parse_status("", 4), DaemonStatus::Stopped);
     }
 
     #[test]

@@ -497,8 +497,14 @@ mod tests {
 
     #[test]
     fn test_interpret_command_result_not_found() {
-        assert!(matches!(interpret_command_result(-libc::ENOENT, 0), Ok(false)));
-        assert!(matches!(interpret_command_result(-libc::ENOENT, 42), Ok(false)));
+        assert!(matches!(
+            interpret_command_result(-libc::ENOENT, 0),
+            Ok(false)
+        ));
+        assert!(matches!(
+            interpret_command_result(-libc::ENOENT, 42),
+            Ok(false)
+        ));
     }
 
     #[test]
@@ -745,9 +751,9 @@ mod tests {
         // On systems without ublk, should return specific error
         let result = UblkControl::open();
         match result {
-            Ok(_) => {} // ublk is available
+            Ok(_) => {}                             // ublk is available
             Err(Error::ControlDeviceNotFound) => {} // Expected
-            Err(Error::OpenControl(_)) => {} // Permission denied
+            Err(Error::OpenControl(_)) => {}        // Permission denied
             Err(e) => panic!("Unexpected error: {:?}", e),
         }
     }
@@ -769,7 +775,7 @@ mod tests {
         match result {
             Ok(count) => assert!(count <= 8), // Can't clean more than the range
             Err(Error::ControlDeviceNotFound) => {} // Expected on systems without ublk
-            Err(_) => {} // Other errors acceptable
+            Err(_) => {}                      // Other errors acceptable
         }
     }
 
@@ -806,7 +812,13 @@ mod tests {
 
         for (errno, is_err, is_busy) in test_cases {
             let result = interpret_command_result(errno, 0);
-            assert_eq!(result.is_err(), is_err, "errno {} should be err={}", errno, is_err);
+            assert_eq!(
+                result.is_err(),
+                is_err,
+                "errno {} should be err={}",
+                errno,
+                is_err
+            );
             if is_busy {
                 assert!(matches!(result, Err(Error::DeviceBusy { .. })));
             }

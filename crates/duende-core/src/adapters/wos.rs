@@ -538,7 +538,10 @@ mod tests {
     fn test_allocate_pid_monotonic() {
         let pids: Vec<u32> = (0..10).map(|_| WosAdapter::allocate_pid()).collect();
         for i in 1..pids.len() {
-            assert!(pids[i] > pids[i - 1], "PIDs must be monotonically increasing");
+            assert!(
+                pids[i] > pids[i - 1],
+                "PIDs must be monotonically increasing"
+            );
         }
     }
 
@@ -655,16 +658,28 @@ mod tests {
     fn test_extract_exit_code_various_formats() {
         // With space after colon
         assert_eq!(WosAdapter::extract_exit_code(r#""exit_code": 0"#), Some(0));
-        assert_eq!(WosAdapter::extract_exit_code(r#""exit_code": 42"#), Some(42));
-        assert_eq!(WosAdapter::extract_exit_code(r#""exit_code": 255"#), Some(255));
+        assert_eq!(
+            WosAdapter::extract_exit_code(r#""exit_code": 42"#),
+            Some(42)
+        );
+        assert_eq!(
+            WosAdapter::extract_exit_code(r#""exit_code": 255"#),
+            Some(255)
+        );
 
         // Without space after colon
         assert_eq!(WosAdapter::extract_exit_code(r#""exit_code":0"#), Some(0));
         assert_eq!(WosAdapter::extract_exit_code(r#""exit_code":1"#), Some(1));
 
         // Negative exit codes
-        assert_eq!(WosAdapter::extract_exit_code(r#""exit_code": -1"#), Some(-1));
-        assert_eq!(WosAdapter::extract_exit_code(r#""exit_code":-15"#), Some(-15));
+        assert_eq!(
+            WosAdapter::extract_exit_code(r#""exit_code": -1"#),
+            Some(-1)
+        );
+        assert_eq!(
+            WosAdapter::extract_exit_code(r#""exit_code":-15"#),
+            Some(-15)
+        );
 
         // In larger JSON context
         assert_eq!(
@@ -819,7 +834,8 @@ mod tests {
     async fn test_wos_adapter_signal_invalid_handle() {
         let adapter = WosAdapter::new();
         // Create a handle without a PID (container type doesn't have pid())
-        let handle = DaemonHandle::container(crate::types::DaemonId::new(), "docker", "test-container");
+        let handle =
+            DaemonHandle::container(crate::types::DaemonId::new(), "docker", "test-container");
         let result = adapter.signal(&handle, Signal::Term).await;
         assert!(result.is_err());
     }
@@ -827,7 +843,8 @@ mod tests {
     #[tokio::test]
     async fn test_wos_adapter_status_invalid_handle() {
         let adapter = WosAdapter::new();
-        let handle = DaemonHandle::container(crate::types::DaemonId::new(), "docker", "test-container");
+        let handle =
+            DaemonHandle::container(crate::types::DaemonId::new(), "docker", "test-container");
         let result = adapter.status(&handle).await;
         assert!(result.is_err());
     }
@@ -835,7 +852,8 @@ mod tests {
     #[tokio::test]
     async fn test_wos_adapter_attach_tracer_invalid_handle() {
         let adapter = WosAdapter::new();
-        let handle = DaemonHandle::container(crate::types::DaemonId::new(), "docker", "test-container");
+        let handle =
+            DaemonHandle::container(crate::types::DaemonId::new(), "docker", "test-container");
         let result = adapter.attach_tracer(&handle).await;
         assert!(result.is_err());
     }
@@ -933,12 +951,7 @@ mod tests {
         for level in 0..=7 {
             let name = WosAdapter::priority_name(level);
             let parsed = WosAdapter::priority_from_name(name);
-            assert_eq!(
-                parsed,
-                Some(level),
-                "Roundtrip failed for level {}",
-                level
-            );
+            assert_eq!(parsed, Some(level), "Roundtrip failed for level {}", level);
         }
     }
 }
