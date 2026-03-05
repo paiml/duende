@@ -1,17 +1,13 @@
-# Sovereign AI Supply Chain Security Configuration
-# Per Iron Lotus Framework Section 3.0.4
-# Reference: https://embarkstudios.github.io/cargo-deny/
+# cargo-deny configuration
+# Deployed from paiml/infra — do not edit manually.
+# Spec: docs/specifications/unified-ci-pipeline.md
 
 [graph]
-targets = [
-    "x86_64-unknown-linux-gnu",
-    "x86_64-apple-darwin",
-    "aarch64-apple-darwin",
-    "wasm32-wasi",
-]
+targets = []
+all-features = false
+no-default-features = false
 
 [advisories]
-db-path = "~/.cargo/advisory-db"
 vulnerability = "deny"
 unmaintained = "warn"
 yanked = "deny"
@@ -19,7 +15,6 @@ notice = "warn"
 ignore = []
 
 [licenses]
-unlicensed = "deny"
 allow = [
     "MIT",
     "Apache-2.0",
@@ -27,34 +22,24 @@ allow = [
     "BSD-2-Clause",
     "BSD-3-Clause",
     "ISC",
-    "Zlib",
+    "Unicode-3.0",
     "Unicode-DFS-2016",
+    "Zlib",
+    "BSL-1.0",
+    "OpenSSL",
+    "0BSD",
+    "CC0-1.0",
+    "MPL-2.0",
 ]
-copyleft = "deny"
-confidence-threshold = 0.93
+confidence-threshold = 0.8
 
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
 highlight = "all"
 
-# P3/P4 dependencies to avoid
-deny = [
-    # Crates with known security issues
-    { name = "openssl" },
-    { name = "openssl-sys" },
-    # Prefer PAIML stack components
-    { name = "rayon", wrappers = [] },  # Use repartir instead
-]
-
-skip = []
-skip-tree = []
-
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 allow-git = []
-
-[sources.allow-org]
-github = ["paiml"]
