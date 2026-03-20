@@ -33,8 +33,13 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Run tests
+      - name: Run tests (Linux)
+        if: runner.os == 'Linux'
         run: cargo test --workspace
+
+      - name: Run tests (macOS — exclude Linux-only ublk crate)
+        if: runner.os == 'macOS'
+        run: cargo test --workspace --exclude duende-ublk
 
   lint:
     name: Lint
