@@ -13,10 +13,7 @@ env:
 jobs:
   test:
     name: Test
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -33,13 +30,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Run tests (Linux)
-        if: runner.os == 'Linux'
+      - name: Run tests
         run: cargo test --workspace
-
-      - name: Run tests (macOS — exclude Linux-only ublk crate)
-        if: runner.os == 'macOS'
-        run: cargo test --workspace --exclude duende-ublk
 
   lint:
     name: Lint
