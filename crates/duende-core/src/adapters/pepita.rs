@@ -599,7 +599,10 @@ mod tests {
             String::from("/var/lib/rootfs.img"),
         );
         assert_eq!(adapter.default_kernel.as_deref(), Some("/boot/vmlinuz"));
-        assert_eq!(adapter.default_rootfs.as_deref(), Some("/var/lib/rootfs.img"));
+        assert_eq!(
+            adapter.default_rootfs.as_deref(),
+            Some("/var/lib/rootfs.img")
+        );
     }
 
     #[test]

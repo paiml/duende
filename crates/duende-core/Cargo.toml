@@ -35,6 +35,7 @@ dirs-next = "2.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 dirs-next = "2.0"
+libc.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true

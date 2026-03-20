@@ -40,9 +40,8 @@ mod sys;
 
 pub use control::{
     UblkControl, block_device_exists, block_device_path, build_device_command,
-    build_get_info_command, char_device_path, cleanup_orphaned_devices,
-    control_device_available, detect_orphaned_devices, detect_orphans_in_dir,
-    interpret_command_result, parse_char_device_id,
+    build_get_info_command, char_device_path, cleanup_orphaned_devices, control_device_available,
+    detect_orphaned_devices, detect_orphans_in_dir, interpret_command_result, parse_char_device_id,
 };
 pub use error::Error;
 pub use sys::{UBLK_CTRL_DEV, UblkCtrlCmd, UblkCtrlCmdExt, UblkCtrlDevInfo};
