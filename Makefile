@@ -8,7 +8,7 @@
 #   make tier4       # CI/CD quality gate
 
 .PHONY: all tier1 tier2 tier3 tier4 \
-        fmt fmt-check clippy check test test-lib test-all \
+        fmt fmt-check clippy check test test-fast test-lib test-all lint \
         coverage coverage-html mutants mutants-fast \
         deny audit falsification doc book book-serve clean \
         example-mlock example-mlock-status example-mlock-required \
@@ -51,6 +51,13 @@ test-lib:
 
 test:
 	cargo nextest run --workspace 2>/dev/null || cargo test --workspace
+
+# Fast test target for CI and quick iteration (<30s)
+test-fast:
+	cargo test --workspace --lib
+
+# Lint: formatting + clippy (optimized with --workspace for batch checking)
+lint: fmt-check clippy
 
 deny:
 	cargo deny check 2>/dev/null || echo "⚠ cargo-deny not installed, skipping"

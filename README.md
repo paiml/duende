@@ -12,6 +12,32 @@
 
 Cross-platform daemon framework for the PAIML Sovereign AI Stack.
 
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+- [Status](#status)
+- [Architecture](#architecture)
+- [Example: Implementing a Daemon](#example-implementing-a-daemon)
+- [Memory Locking](#memory-locking-dt-007-swap-deadlock-prevention)
+- [Platform Adapters](#platform-adapters)
+- [Crate Overview](#crate-overview)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Installation
+
+```bash
+# Add duende-core to your Cargo.toml
+cargo add duende-core
+
+# Or add specific crates
+cargo add duende-mlock    # Memory locking
+cargo add duende-observe  # Process monitoring
+cargo add duende-policy   # Circuit breakers, cgroups
+```
+
 ## Quick Start
 
 ```bash
@@ -211,6 +237,14 @@ panic = "deny"
 - [API Documentation](https://docs.rs/duende-core)
 - [Book](https://paiml.github.io/duende)
 - [Specification](docs/specifications/daemon-tools-spec.md)
+
+## Contributing
+
+1. Run `make lint` before committing (formatting + clippy)
+2. Add tests for all new functionality (90%+ coverage target)
+3. Run `make test` to verify all tests pass
+4. Follow conventional commit format with ticket references
+5. Maintain zero SATD (no TODO/FIXME/HACK comments)
 
 ## License
 

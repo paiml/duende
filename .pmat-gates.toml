@@ -1,0 +1,33 @@
+# PMAT Quality Gates for Duende
+# Cross-platform daemon framework quality enforcement
+
+[project]
+name = "duende"
+type = "rust"
+version = "0.2.0"
+
+[quality_gate]
+max_cyclomatic_complexity = 30
+max_cognitive_complexity = 25
+max_satd_comments = 0
+min_test_coverage = 85.0
+fail_fast = true
+strict_mode = true
+
+[rust]
+edition = "2021"
+enforce_clippy = true
+enforce_rustfmt = true
+max_function_length = 150
+max_file_length = 2000
+
+[testing]
+min_unit_test_coverage = 85.0
+min_mutation_score = 80.0
+require_property_tests = false
+
+[pre_commit]
+enabled = true
+checks = ["fmt", "clippy", "satd", "unit-tests"]
+block_commit = true
+timeout_seconds = 30
