@@ -95,7 +95,7 @@ duende-ublk = { version = "0.2", path = "crates/duende-ublk" }
 humantime = "2.1"
 
 # Platform-specific
-nix = { version = "0.29", features = ["process", "signal"] }
+nix = { version = "0.29", features = ["process", "signal", "user"] }
 libc = "0.2"
 parking_lot = "0.12"
 
