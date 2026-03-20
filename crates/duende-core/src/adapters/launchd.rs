@@ -8,6 +8,7 @@ use crate::platform::Platform;
 use crate::types::{DaemonStatus, FailureReason, Signal};
 
 use async_trait::async_trait;
+use nix::unistd::Uid;
 use std::path::PathBuf;
 use tokio::process::Command;
 
@@ -51,7 +52,7 @@ impl LaunchdDomain {
         match self {
             Self::User => {
                 // Get current user ID
-                let uid = unsafe { libc::getuid() };
+                let uid = Uid::current();
                 format!("gui/{}", uid)
             }
             Self::System => "system".to_string(),
