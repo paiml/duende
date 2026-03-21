@@ -11,7 +11,7 @@ members = [
 ]
 
 [package]
-exclude = ["tests/", "benches/", "docs/", ".github/", "book/", ".pmat/"]
+exclude = ["tests/", "benches/", "docs/", ".github/", "book/", ".pmat/", "target/", ".profraw", ".profdata", ".vscode/", ".idea/", "proptest-regressions/"]
 name = "duende"
 version.workspace = true
 edition.workspace = true
