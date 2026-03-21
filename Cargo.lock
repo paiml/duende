@@ -1030,7 +1030,6 @@ dependencies = [
  "async-trait",
  "dirs-next",
  "humantime",
- "libc",
  "nix 0.29.0",
  "pacha",
  "parking_lot",
