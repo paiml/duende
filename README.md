@@ -246,6 +246,10 @@ panic = "deny"
 4. Follow conventional commit format with ticket references
 5. Maintain zero SATD (no TODO/FIXME/HACK comments)
 
+## See Also
+
+- [Cookbook](https://github.com/paiml/sovereign-ai-cookbook)
+
 ## License
 
 MIT
