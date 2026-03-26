@@ -1,25 +1,23 @@
-# Sovereign AI Supply Chain Security Configuration
-# Per Iron Lotus Framework Section 3.0.4
-# Reference: https://embarkstudios.github.io/cargo-deny/
+# cargo-deny configuration
+# Deployed from paiml/infra — do not edit manually.
+# Spec: docs/specifications/unified-ci-pipeline.md
 
 [graph]
-targets = [
-    "x86_64-unknown-linux-gnu",
-    "x86_64-apple-darwin",
-    "aarch64-apple-darwin",
-    "wasm32-wasi",
-]
+targets = []
+all-features = false
+no-default-features = false
 
 [advisories]
-db-path = "~/.cargo/advisory-db"
-vulnerability = "deny"
-unmaintained = "warn"
-yanked = "deny"
-notice = "warn"
-ignore = []
+ignore = [
+    # Unmaintained transitive deps with no available fix.
+    # Reviewed 2026-03-26 — all are deep transitive, no direct usage.
+    { id = "RUSTSEC-2024-0384", reason = "instant: transitive via web-time, no replacement available" },
+    { id = "RUSTSEC-2024-0436", reason = "paste: transitive via simba/nalgebra/parquet, use pastey when upstream migrates" },
+    { id = "RUSTSEC-2025-0119", reason = "number_prefix: transitive via indicatif, no replacement available" },
+    { id = "RUSTSEC-2025-0141", reason = "bincode: transitive, widely used, no drop-in replacement" },
+]
 
 [licenses]
-unlicensed = "deny"
 allow = [
     "MIT",
     "Apache-2.0",
@@ -27,28 +25,23 @@ allow = [
     "BSD-2-Clause",
     "BSD-3-Clause",
     "ISC",
-    "Zlib",
+    "Unicode-3.0",
     "Unicode-DFS-2016",
+    "Zlib",
+    "BSL-1.0",
+    "OpenSSL",
+    "0BSD",
+    "CC0-1.0",
+    "MPL-2.0",
+    "CDLA-Permissive-2.0",
+    "MIT-0",
 ]
-copyleft = "deny"
-confidence-threshold = 0.93
+confidence-threshold = 0.8
 
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
 highlight = "all"
-
-# P3/P4 dependencies to avoid
-deny = [
-    # Crates with known security issues
-    { name = "openssl" },
-    { name = "openssl-sys" },
-    # Prefer PAIML stack components
-    { name = "rayon", wrappers = [] },  # Use repartir instead
-]
-
-skip = []
-skip-tree = []
 
 [sources]
 unknown-registry = "deny"
