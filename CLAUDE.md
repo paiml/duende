@@ -8,12 +8,6 @@ This project follows contract-first development with provable-contracts.
 Contracts live in `../provable-contracts/contracts/duende/`.
 Run `pmat comply check` to validate contract compliance.
 
-## Contract-First Design
-
-This project follows contract-first development with provable-contracts.
-Contracts live in `../provable-contracts/contracts/duende/`.
-Run `pmat comply check` to validate contract compliance.
-
 ## Project Overview
 
 Duende is a cross-platform daemon orchestration framework for the **PAIML Sovereign AI Stack**. It provides unified lifecycle management, observability, and policy enforcement for long-running processes across Linux (systemd), macOS (launchd), Docker containers, pepita microVMs, and WOS (WebAssembly Operating System).
