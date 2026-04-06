@@ -17,6 +17,11 @@ pub use duende_core as core;
 pub use duende_mlock as mlock;
 pub use duende_platform as platform;
 
+// Contract assertions from YAML (pv codegen)
+#[macro_use]
+#[allow(unused_macros, clippy::duplicated_attributes)]
+mod generated_contracts;
+
 /// Prelude module for common imports.
 pub mod prelude {
     pub use duende_core::{
