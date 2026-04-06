@@ -43,6 +43,11 @@
 // Allow significant_drop_tightening - overly aggressive for async code with locks
 #![allow(clippy::significant_drop_tightening)]
 
+// Contract assertions from YAML (pv codegen)
+#[macro_use]
+#[allow(unused_macros, clippy::duplicated_attributes)]
+mod generated_contracts;
+
 pub mod adapter;
 pub mod adapters;
 pub mod config;

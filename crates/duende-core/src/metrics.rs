@@ -75,6 +75,7 @@ impl DaemonMetrics {
 
     /// Increments the request counter.
     pub fn record_request(&self) {
+        contract_pre_red_metrics!();
         self.inner.requests_total.fetch_add(1, Ordering::Relaxed);
     }
 
@@ -113,6 +114,7 @@ impl DaemonMetrics {
     /// Returns error rate (errors / requests).
     #[must_use]
     pub fn error_rate(&self) -> f64 {
+        contract_pre_red_metrics!();
         let requests = self.requests_total();
         if requests > 0 {
             self.errors_total() as f64 / requests as f64
@@ -149,6 +151,7 @@ impl DaemonMetrics {
     /// Returns average duration.
     #[must_use]
     pub fn duration_avg(&self) -> Duration {
+        contract_pre_red_metrics!();
         let count = self.inner.duration_count.load(Ordering::Relaxed);
         if count > 0 {
             let sum_us = self.inner.duration_sum_us.load(Ordering::Relaxed);
@@ -262,6 +265,7 @@ impl DaemonMetrics {
     /// Creates a snapshot of current metrics.
     #[must_use]
     pub fn snapshot(&self) -> MetricsSnapshot {
+        contract_pre_red_metrics!();
         MetricsSnapshot {
             requests_total: self.requests_total(),
             requests_per_second: self.requests_per_second(),

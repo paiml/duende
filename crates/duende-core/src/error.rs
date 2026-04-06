@@ -117,6 +117,7 @@ impl DaemonError {
     /// Returns true if this error is recoverable (daemon can continue).
     #[must_use]
     pub const fn is_recoverable(&self) -> bool {
+        contract_pre_error_classification!();
         matches!(
             self,
             Self::HealthCheck(_) | Self::ResourceLimit { .. } | Self::PolicyViolation(_)
@@ -126,6 +127,7 @@ impl DaemonError {
     /// Returns true if this error requires immediate shutdown.
     #[must_use]
     pub const fn is_fatal(&self) -> bool {
+        contract_pre_error_classification!();
         matches!(self, Self::Init(_) | Self::Internal(_))
     }
 }

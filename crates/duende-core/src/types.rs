@@ -74,18 +74,21 @@ impl DaemonStatus {
     /// Returns true if the daemon is in a terminal state.
     #[must_use]
     pub const fn is_terminal(&self) -> bool {
+        contract_pre_daemon_lifecycle!();
         matches!(self, Self::Stopped | Self::Failed(_))
     }
 
     /// Returns true if the daemon is active (running or paused).
     #[must_use]
     pub const fn is_active(&self) -> bool {
+        contract_pre_daemon_lifecycle!();
         matches!(self, Self::Running | Self::Paused)
     }
 
     /// Returns true if the daemon can receive signals.
     #[must_use]
     pub const fn can_signal(&self) -> bool {
+        contract_pre_daemon_lifecycle!();
         matches!(self, Self::Running | Self::Paused | Self::Stopping)
     }
 }
@@ -149,6 +152,7 @@ impl Signal {
     /// Returns the Unix signal number.
     #[must_use]
     pub const fn as_i32(&self) -> i32 {
+        contract_pre_signal_handling!();
         match self {
             Self::Hup => 1,
             Self::Int => 2,
@@ -165,6 +169,7 @@ impl Signal {
     /// Creates a signal from a Unix signal number.
     #[must_use]
     pub const fn from_i32(sig: i32) -> Option<Self> {
+        contract_pre_signal_handling!();
         match sig {
             1 => Some(Self::Hup),
             2 => Some(Self::Int),

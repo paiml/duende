@@ -198,6 +198,7 @@ impl DaemonContext {
     ///
     /// Returns `None` if no signal is available.
     pub fn try_recv_signal(&mut self) -> Option<Signal> {
+        contract_pre_signal_handling!();
         match self.signal_rx.try_recv() {
             Ok(signal) => {
                 // Auto-set shutdown flag for termination signals
@@ -214,6 +215,7 @@ impl DaemonContext {
     ///
     /// This is async and will yield until a signal is received.
     pub async fn recv_signal(&mut self) -> Option<Signal> {
+        contract_pre_signal_handling!();
         let signal = self.signal_rx.recv().await?;
 
         // Auto-set shutdown flag for termination signals

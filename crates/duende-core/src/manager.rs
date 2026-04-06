@@ -44,6 +44,7 @@ impl RestartPolicy {
     /// Returns true if the daemon should be restarted given the exit reason.
     #[must_use]
     pub fn should_restart(&self, exit_reason: &ExitReason, restart_count: u32) -> bool {
+        contract_pre_restart_policy!();
         match self {
             Self::Never => false,
             Self::Always => true,
@@ -65,6 +66,7 @@ impl RestartPolicy {
     /// Returns the delay before restart.
     #[must_use]
     pub fn restart_delay(&self, restart_count: u32) -> Duration {
+        contract_pre_restart_policy!();
         match self {
             Self::WithBackoff(config) => config.delay_for(restart_count),
             _ => Duration::from_secs(1),
@@ -134,6 +136,7 @@ impl BackoffConfig {
     /// Calculates delay for given restart count (exponential backoff).
     #[must_use]
     pub fn delay_for(&self, restart_count: u32) -> Duration {
+        contract_pre_restart_policy!();
         let base_secs = self.initial_delay.as_secs_f64();
         #[allow(clippy::cast_possible_wrap)] // restart_count won't exceed i32::MAX
         let exp_secs = base_secs * self.multiplier.powi(restart_count as i32);
@@ -249,6 +252,7 @@ impl DaemonManager {
         config: DaemonConfig,
         restart_policy: RestartPolicy,
     ) -> Result<DaemonId> {
+        contract_pre_manager_registration!();
         let id = daemon.id();
         let name = daemon.name().to_string();
 
@@ -276,6 +280,7 @@ impl DaemonManager {
     /// # Errors
     /// Returns an error if the daemon is not found or is still running.
     pub async fn unregister(&self, id: DaemonId) -> Result<()> {
+        contract_pre_manager_registration!();
         let mut daemons = self.daemons.write().await;
 
         let daemon = daemons
@@ -314,6 +319,7 @@ impl DaemonManager {
 
     /// Returns the number of registered daemons.
     pub async fn count(&self) -> usize {
+        contract_pre_manager_registration!();
         self.daemons.read().await.len()
     }
 
@@ -481,6 +487,7 @@ impl DaemonManager {
     /// # Errors
     /// Returns an error if any daemon fails to shut down within the timeout.
     pub async fn shutdown_all(&self) -> Result<()> {
+        contract_pre_manager_registration!();
         let ids = self.list().await;
 
         for id in ids {
