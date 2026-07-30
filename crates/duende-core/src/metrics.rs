@@ -153,11 +153,10 @@ impl DaemonMetrics {
     pub fn duration_avg(&self) -> Duration {
         contract_pre_red_metrics!();
         let count = self.inner.duration_count.load(Ordering::Relaxed);
-        if count > 0 {
-            let sum_us = self.inner.duration_sum_us.load(Ordering::Relaxed);
-            Duration::from_micros(sum_us / count)
-        } else {
-            Duration::ZERO
+        let sum_us = self.inner.duration_sum_us.load(Ordering::Relaxed);
+        match sum_us.checked_div(count) {
+            Some(avg_us) => Duration::from_micros(avg_us),
+            None => Duration::ZERO,
         }
     }
 

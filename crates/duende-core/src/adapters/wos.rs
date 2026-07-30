@@ -308,10 +308,8 @@ impl PlatformAdapter for WosAdapter {
                 Signal::Kill => process.state = ProcessState::Killed(9),
                 Signal::Term => process.state = ProcessState::Exited(0),
                 Signal::Stop => process.state = ProcessState::Stopped,
-                Signal::Cont => {
-                    if process.state == ProcessState::Stopped {
-                        process.state = ProcessState::Running;
-                    }
+                Signal::Cont if process.state == ProcessState::Stopped => {
+                    process.state = ProcessState::Running;
                 }
                 _ => {}
             }

@@ -6,6 +6,14 @@
 //! # Toyota Way: Jidoka (自働化)
 //! Automatic restart with exponential backoff on failure.
 
+// clippy's `duration_suboptimal_units` (new in 1.95) wants `Duration::from_mins`
+// for the five second-valued Durations in this module. That constructor was
+// stabilized in Rust 1.87, and this crate declares `rust-version = "1.83"` —
+// taking the suggestion would silently raise the MSRV. These are all backoff and
+// interval constants where seconds are the natural unit anyway. Revisit if the
+// declared MSRV moves past 1.87.
+#![allow(clippy::duration_suboptimal_units)]
+
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};

@@ -1,5 +1,11 @@
 // Iron Lotus: Allow unwrap/expect in tests for clear failure messages
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
+// clippy's `duration_suboptimal_units` (new in 1.95) wants `Duration::from_mins`
+// for the second-valued Durations in chaos.rs and load.rs. That constructor was
+// stabilized in Rust 1.87 while this workspace declares `rust-version = "1.83"`,
+// so taking the suggestion would silently raise the MSRV. Same rationale as the
+// allow in duende-core's manager.rs; revisit if the declared MSRV passes 1.87.
+#![allow(clippy::duration_suboptimal_units)]
 
 //! # duende-test
 //!
