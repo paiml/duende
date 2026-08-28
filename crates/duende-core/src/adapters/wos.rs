@@ -308,10 +308,8 @@ impl PlatformAdapter for WosAdapter {
                 Signal::Kill => process.state = ProcessState::Killed(9),
                 Signal::Term => process.state = ProcessState::Exited(0),
                 Signal::Stop => process.state = ProcessState::Stopped,
-                Signal::Cont => {
-                    if process.state == ProcessState::Stopped {
-                        process.state = ProcessState::Running;
-                    }
+                Signal::Cont if process.state == ProcessState::Stopped => {
+                    process.state = ProcessState::Running;
                 }
                 _ => {}
             }
@@ -325,54 +323,14 @@ impl PlatformAdapter for WosAdapter {
             .pid()
             .ok_or_else(|| PlatformError::spawn_failed("Invalid handle type for WOS adapter"))?;
 
-        if Self::wos_ctl_available().await {
-            // wos-ctl status --pid <pid> --json
-            let output = tokio::process::Command::new("wos-ctl")
-                .arg("status")
-                .arg("--pid")
-                .arg(pid.to_string())
-                .arg("--json")
-                .output()
-                .await
-                .map_err(|e| {
-                    PlatformError::status_failed(format!("Failed to execute wos-ctl: {}", e))
-                })?;
-
-            if !output.status.success() {
-                return Ok(DaemonStatus::Stopped);
-            }
-
-            let stdout = String::from_utf8_lossy(&output.stdout);
-
-            if stdout.contains("\"state\": \"running\"") {
-                return Ok(DaemonStatus::Running);
-            } else if stdout.contains("\"state\": \"ready\"") {
-                return Ok(DaemonStatus::Starting);
-            } else if stdout.contains("\"state\": \"stopped\"") {
-                return Ok(DaemonStatus::Paused);
-            } else if stdout.contains("\"state\": \"exited\"") {
-                // Parse exit code
-                if let Some(code) = Self::extract_exit_code(&stdout) {
-                    if code != 0 {
-                        return Ok(DaemonStatus::Failed(FailureReason::ExitCode(code)));
-                    }
-                }
-                return Ok(DaemonStatus::Stopped);
-            }
+        // wos-ctl is authoritative when it is installed and recognises the state.
+        if let Some(status) = Self::query_wos_ctl_status(pid).await? {
+            return Ok(status);
         }
 
-        // Check local state
+        // Otherwise fall back to locally tracked state.
         if let Some(process) = self.processes.read().await.get(&pid) {
-            return Ok(match process.state {
-                ProcessState::Ready | ProcessState::Running => DaemonStatus::Running,
-                ProcessState::Waiting => DaemonStatus::Running,
-                ProcessState::Stopped => DaemonStatus::Paused,
-                ProcessState::Exited(code) if code != 0 => {
-                    DaemonStatus::Failed(FailureReason::ExitCode(code))
-                }
-                ProcessState::Exited(_) => DaemonStatus::Stopped,
-                ProcessState::Killed(sig) => DaemonStatus::Failed(FailureReason::Signal(sig)),
-            });
+            return Ok(Self::status_from_process_state(process.state));
         }
 
         Ok(DaemonStatus::Stopped)
@@ -393,6 +351,75 @@ impl PlatformAdapter for WosAdapter {
 }
 
 impl WosAdapter {
+    /// Asks `wos-ctl` for the status of `pid`.
+    ///
+    /// `Ok(None)` means "no answer from wos-ctl" — either it is not installed,
+    /// or it reported a `state` this adapter does not recognise — and the
+    /// caller should fall back to locally tracked state. A non-zero exit from
+    /// wos-ctl is an answer: the process is `Stopped`.
+    async fn query_wos_ctl_status(pid: u32) -> PlatformResult<Option<DaemonStatus>> {
+        if !Self::wos_ctl_available().await {
+            return Ok(None);
+        }
+
+        // wos-ctl status --pid <pid> --json
+        let output = tokio::process::Command::new("wos-ctl")
+            .arg("status")
+            .arg("--pid")
+            .arg(pid.to_string())
+            .arg("--json")
+            .output()
+            .await
+            .map_err(|e| {
+                PlatformError::status_failed(format!("Failed to execute wos-ctl: {}", e))
+            })?;
+
+        if !output.status.success() {
+            return Ok(Some(DaemonStatus::Stopped));
+        }
+
+        Ok(Self::parse_wos_ctl_status(&String::from_utf8_lossy(
+            &output.stdout,
+        )))
+    }
+
+    /// Maps a `wos-ctl status --json` payload to a [`DaemonStatus`].
+    ///
+    /// Returns `None` for an unrecognised `state`, which the caller treats as
+    /// "fall back to locally tracked state".
+    fn parse_wos_ctl_status(stdout: &str) -> Option<DaemonStatus> {
+        if stdout.contains("\"state\": \"running\"") {
+            Some(DaemonStatus::Running)
+        } else if stdout.contains("\"state\": \"ready\"") {
+            Some(DaemonStatus::Starting)
+        } else if stdout.contains("\"state\": \"stopped\"") {
+            Some(DaemonStatus::Paused)
+        } else if stdout.contains("\"state\": \"exited\"") {
+            // A missing or zero exit code is a clean stop, not a failure.
+            Some(match Self::extract_exit_code(stdout) {
+                Some(code) if code != 0 => DaemonStatus::Failed(FailureReason::ExitCode(code)),
+                _ => DaemonStatus::Stopped,
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Maps locally tracked process state to a [`DaemonStatus`].
+    fn status_from_process_state(state: ProcessState) -> DaemonStatus {
+        match state {
+            ProcessState::Ready | ProcessState::Running | ProcessState::Waiting => {
+                DaemonStatus::Running
+            }
+            ProcessState::Stopped => DaemonStatus::Paused,
+            ProcessState::Exited(code) if code != 0 => {
+                DaemonStatus::Failed(FailureReason::ExitCode(code))
+            }
+            ProcessState::Exited(_) => DaemonStatus::Stopped,
+            ProcessState::Killed(sig) => DaemonStatus::Failed(FailureReason::Signal(sig)),
+        }
+    }
+
     /// Extracts exit code from JSON status output.
     fn extract_exit_code(output: &str) -> Option<i32> {
         let patterns = ["\"exit_code\": ", "\"exit_code\":"];
