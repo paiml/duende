@@ -114,3 +114,67 @@ jobs:
 
       - name: Run security audit
         run: cargo audit
+
+  # Aggregating gate. The paiml org ruleset "Green Main" requires exactly one
+  # status context — `gate` — so this job's id AND name must stay literally
+  # `gate`. It measures nothing of its own: it passes only when every real CI
+  # job above reported `success`, and it names the jobs it checked so a green
+  # here can never mean "checked nothing".
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    needs: [test, lint, coverage, security]
+    if: always()
+    steps:
+      - name: Aggregate CI job results
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          # The denominator. Every job listed in `needs:` must appear here and
+          # must have succeeded. Keep in sync with `needs:` above — a mismatch
+          # fails the gate rather than silently guarding fewer jobs.
+          EXPECTED: 'test lint coverage security'
+        run: |
+          set -euo pipefail
+
+          echo "$NEEDS_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value.result)"' > results.txt
+
+          checked=0
+          failed=0
+          for job in $EXPECTED; do
+            result="$(sed -n "s/^${job}=//p" results.txt)"
+            if [ -z "$result" ]; then
+              echo "MISSING  ${job}: not present in needs — gate is not guarding it"
+              failed=$((failed + 1))
+              continue
+            fi
+            checked=$((checked + 1))
+            if [ "$result" = "success" ]; then
+              printf 'ok       %s: %s\n' "$job" "$result"
+            else
+              printf 'FAIL     %s: %s\n' "$job" "$result"
+              failed=$((failed + 1))
+            fi
+          done
+
+          # Anything in needs but not in EXPECTED is unguarded — also a failure.
+          while IFS='=' read -r job _; do
+            case " $EXPECTED " in
+              *" $job "*) ;;
+              *)
+                echo "UNGUARDED ${job}: in needs but not in EXPECTED"
+                failed=$((failed + 1))
+                ;;
+            esac
+          done < results.txt
+
+          echo "checked ${checked} of $(printf '%s\n' $EXPECTED | wc -l) expected CI jobs"
+
+          if [ "$checked" -eq 0 ]; then
+            echo "gate inspected zero jobs — refusing to report a pass"
+            exit 1
+          fi
+          if [ "$failed" -ne 0 ]; then
+            echo "gate: ${failed} problem(s) — see above"
+            exit 1
+          fi
+          echo "gate: all ${checked} CI jobs green"

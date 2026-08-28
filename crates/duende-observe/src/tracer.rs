@@ -67,7 +67,13 @@ impl DaemonTracer {
     ///
     /// # Errors
     /// Returns an error if the process doesn't exist.
+    // clippy 1.98 split this case out of `unused_async` into
+    // `unused_async_trait_impl`, so both names are allowed. `unknown_lints` is
+    // allowed too because clippy < 1.98 does not know the new name and would
+    // otherwise hard-error on it under `-D warnings`.
+    #[allow(unknown_lints)]
     #[allow(clippy::unused_async)]
+    #[allow(clippy::unused_async_trait_impl)]
     pub async fn attach(&mut self, pid: u32) -> Result<()> {
         // Verify process exists
         #[cfg(target_os = "linux")]
@@ -100,7 +106,13 @@ impl DaemonTracer {
     ///
     /// # Errors
     /// Returns an error if no daemon is attached or collection fails.
+    // clippy 1.98 split this case out of `unused_async` into
+    // `unused_async_trait_impl`, so both names are allowed. `unknown_lints` is
+    // allowed too because clippy < 1.98 does not know the new name and would
+    // otherwise hard-error on it under `-D warnings`.
+    #[allow(unknown_lints)]
     #[allow(clippy::unused_async)]
+    #[allow(clippy::unused_async_trait_impl)]
     pub async fn collect(&mut self) -> Result<TraceReport> {
         let pid = self
             .attached_pid
