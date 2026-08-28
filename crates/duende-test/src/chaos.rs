@@ -78,7 +78,14 @@ impl ChaosInjector {
     ///
     /// # Errors
     /// Returns an error if injection fails to start.
-    #[allow(clippy::unused_async)] // Will be async when actually spawning chaos threads
+    // Deliberate: the `async` is API surface for when this really does spawn/stop
+    // chaos threads. clippy 1.98 split this case out of `unused_async` into
+    // `unused_async_trait_impl`, so both names are allowed. `unknown_lints` is
+    // allowed too because clippy < 1.98 does not know the new name and would
+    // otherwise hard-error on it under `-D warnings`.
+    #[allow(unknown_lints)]
+    #[allow(clippy::unused_async)]
+    #[allow(clippy::unused_async_trait_impl)]
     pub async fn start(&mut self) -> Result<()> {
         tracing::warn!("starting chaos injection: {:?}", self.config);
         self.active = true;
@@ -89,7 +96,14 @@ impl ChaosInjector {
     ///
     /// # Errors
     /// Returns an error if injection fails to stop.
-    #[allow(clippy::unused_async)] // Will be async when actually stopping chaos threads
+    // Deliberate: the `async` is API surface for when this really does spawn/stop
+    // chaos threads. clippy 1.98 split this case out of `unused_async` into
+    // `unused_async_trait_impl`, so both names are allowed. `unknown_lints` is
+    // allowed too because clippy < 1.98 does not know the new name and would
+    // otherwise hard-error on it under `-D warnings`.
+    #[allow(unknown_lints)]
+    #[allow(clippy::unused_async)]
+    #[allow(clippy::unused_async_trait_impl)]
     pub async fn stop(&mut self) -> Result<()> {
         tracing::info!("stopping chaos injection");
         self.active = false;
